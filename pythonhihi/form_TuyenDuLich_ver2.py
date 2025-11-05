@@ -1,10 +1,20 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
-
+import pyodbc
+# update moi nhat nha 
 root = tk.Tk()
 root.title("Quản Lý Tuyến Du Lịch")
 root.geometry("1000x650")
 root.configure(bg="#FFFACD")
+
+# ------------------ KẾT NỐI SQL SERVER ------------------
+conn = pyodbc.connect(
+    'DRIVER={SQL Server};'
+    'SERVER=localhost\\SQLEXPRESS01;'  
+    'DATABASE=QuanLyTuyenDuLich;'
+    'Trusted_Connection=yes;'
+)
+cursor = conn.cursor()
 
 # ------------------ DANH SÁCH MẶC ĐỊNH ------------------
 list_di = ["Hồ Chí Minh", "Hà Nội", "Đà Nẵng"]
@@ -112,8 +122,8 @@ def thoat():
     root.destroy()
 
 def home():
-    lam_moi_form()
-    messagebox.showinfo("Trang chủ", "Bạn đã trở về trang chủ!")
+    root.destroy()
+  
 
 # ------------------ GIAO DIỆN ------------------
 tk.Label(root, text="Quản Lý Tuyến Du Lịch", font=("Arial", 20, "bold"), bg="#FFFACD").place(x=300, y=45)
@@ -121,7 +131,6 @@ tk.Label(root, text="Quản Lý Tuyến Du Lịch", font=("Arial", 20, "bold"), 
 # Combobox địa điểm đi/đến
 tk.Label(root, text="Địa Điểm Đi", font=("Arial", 12), bg="#FFFACD").place(x=200, y=150)
 entry_ddDi = ttk.Combobox(root, width=50, values=list_di, state="normal")
-
 entry_ddDi.place(x=380, y=150)
 entry_ddDi.bind("<<ComboboxSelected>>", cap_nhat_dia_diem_den)
 

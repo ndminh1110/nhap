@@ -9,7 +9,7 @@ conn = pyodbc.connect(
             'DATABASE=QuanLyTuyenDuLich;'
             'Trusted_Connection=yes;'    # Nếu bạn dùng Windows Authentication
         )
-cursor = conn.cursor()
+
 
 def ve_trang_chu():
     root.destroy()

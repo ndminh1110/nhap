@@ -11,7 +11,7 @@ root.configure(bg="#FFFACD")
 # ------------------ KẾT NỐI SQL SERVER ------------------
 conn = pyodbc.connect(
     'DRIVER={SQL Server};'
-    'SERVER=localhost\\SQLEXPRESS01;'  
+    'SERVER=ADIN-PC;'  
     'DATABASE=QuanLyTuyenDuLich;'
     'Trusted_Connection=yes;'
 )

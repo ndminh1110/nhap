@@ -9,7 +9,6 @@ def login():
     username = entry_user.get()
     password = entry_pass.get()
 
-    #try:
         # Kết nối tới SQL Server
     conn = pyodbc.connect(
             'DRIVER={SQL Server};'

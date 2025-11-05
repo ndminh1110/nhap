@@ -6,7 +6,7 @@ def ve_trang_chu():
     root.destroy()
 
 def them():
-    print("Thêm khách hàng")
+    pass
 
 def xoa():
     pass
@@ -50,29 +50,29 @@ frame_info = tk.Frame(root, bg="#FFFACD")
 frame_info.place(x=100, y=100)
 
 tk.Label(frame_info, text="Mã Nhân Viên", bg="#FFFACD", font=("Times New Roman", 12)).grid(row=0, column=0, sticky="w", pady=5)
-entry_ma = tk.Entry(frame_info, width=30)
-entry_ma.grid(row=0, column=1, padx=10, pady=5)
+entry_maNV = tk.Entry(frame_info, width=30)
+entry_maNV.grid(row=0, column=1, padx=10, pady=5)
 
 tk.Label(frame_info, text="Giới Tính", bg="#FFFACD", font=("Times New Roman", 12)).grid(row=0, column=2, padx=10, sticky="w")
-gender = tk.StringVar(value="Nam")
-tk.Radiobutton(frame_info, text="Nam", variable=gender, value="Nam", bg="#FFFACD").grid(row=0, column=3, sticky="w")
-tk.Radiobutton(frame_info, text="Nữ", variable=gender, value="Nữ", bg="#FFFACD").grid(row=0, column=4, sticky="w")
+phai = tk.StringVar(value="Nam")
+tk.Radiobutton(frame_info, text="Nam", variable=phai, value="Nam", bg="#FFFACD").grid(row=0, column=3, sticky="w")
+tk.Radiobutton(frame_info, text="Nữ", variable=phai, value="Nữ", bg="#FFFACD").grid(row=0, column=4, sticky="w")
 
 tk.Label(frame_info, text="Tên Nhân Viên", bg="#FFFACD", font=("Times New Roman", 12)).grid(row=1, column=0, sticky="w", pady=5)
-entry_ten = tk.Entry(frame_info, width=30)
-entry_ten.grid(row=1, column=1, padx=10, pady=5)
+entry_hoTen = tk.Entry(frame_info, width=30)
+entry_hoTen.grid(row=1, column=1, padx=10, pady=5)
 
 tk.Label(frame_info, text="Ngày Sinh", bg="#FFFACD", font=("Times New Roman", 12)).grid(row=1, column=2, padx=10, sticky="w")
-date_ngaysinh = DateEntry(frame_info, width=12, background='darkblue', foreground='white', borderwidth=2, date_pattern='d/m/yyyy')
-date_ngaysinh.grid(row=1, column=3, padx=10, pady=5, columnspan=2)
+date_ngsinh = DateEntry(frame_info, width=12, background='darkblue', foreground='white', borderwidth=2, date_pattern='d/m/yyyy')
+date_ngsinh.grid(row=1, column=3, padx=10, pady=5, columnspan=2)
 
 tk.Label(frame_info, text="Chức vụ", bg="#FFFACD", font=("Times New Roman", 12)).grid(row=2, column=0, sticky="w", pady=5)
-entry_chucvu = tk.Entry(frame_info, width=30)
-entry_chucvu.grid(row=2, column=1, padx=10, pady=5)
+entry_chucVu = tk.Entry(frame_info, width=30)
+entry_chucVu.grid(row=2, column=1, padx=10, pady=5)
 
 tk.Label(frame_info, text="Địa Chỉ", bg="#FFFACD", font=("Times New Roman", 12)).grid(row=2, column=2, sticky="w", padx=10)
-entry_diachi = tk.Entry(frame_info, width=30)
-entry_diachi.grid(row=2, column=3, padx=10, pady=5, columnspan=2)
+entry_dchi = tk.Entry(frame_info, width=30)
+entry_dchi.grid(row=2, column=3, padx=10, pady=5, columnspan=2)
 
 tk.Label(frame_info, text="Số Điện Thoại", bg="#FFFACD", font=("Times New Roman", 12)).grid(row=3, column=0, sticky="w", pady=5)
 entry_sdt = tk.Entry(frame_info, width=30)
@@ -82,13 +82,8 @@ tk.Label(frame_info, text="Lương", bg="#FFFACD", font=("Times New Roman", 12))
 entry_luong = tk.Entry(frame_info, width=30)
 entry_luong.grid(row=3, column=3, padx=10, pady=5, columnspan=2)
 
-# ===========================
-# KHUNG THÔNG TIN NHÂN VIÊN
-# ===========================
-#frame_info = tk.LabelFrame(root, text="Thông tin nhân viên",font=("Times New Roman", 12, "bold"), bg="#FFFACD")
-#text_info.pack(padx=10, pady=10)
 
-# ========== Khung Thông tin khách hàng ==========
+# ========== Khung Thông tin nhân viên ==========
 frame_info = tk.LabelFrame(root, text="Thông tin nhân viên", font=("Times New Roman", 12), bg="#fff8dc", width=750, height=350)
 frame_info.place(x=50, y=250)
 

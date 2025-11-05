@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
 import pyodbc
-#moi nhatttttt
+#moi nhatttttt nhat nhat 
 
 root = tk.Tk()
 root.title("Quản Lý Tuyến Du Lịch")
@@ -18,13 +18,28 @@ conn = pyodbc.connect(
 cursor = conn.cursor()
 
 # ------------------ HÀM SINH MÃ TỰ ĐỘNG ------------------
-def tao_ma_tuyen_tu_dong():
+'''def tao_ma_tuyen_tu_dong():
     cursor.execute("SELECT MAX(maTuyen) FROM TUYENDULICH")
     result = cursor.fetchone()[0]
     if result is None:
         return "T0001"
     so = int(result[1:]) + 1
-    return f"T{so:04d}"
+    return f"T{so:04d}" '''
+def tao_ma_tuyen_tu_dong():
+    try:
+        cursor.execute("SELECT maTuyen FROM TUYENDULICH ORDER BY maTuyen DESC")
+        result = cursor.fetchone()
+        if result and result[0]:
+            so_hien_tai = int(result[0][1:])  # Bỏ chữ 'T' ở đầu
+            #ma_moi = f"T{so_hien_tai + 1:03d}"
+            so_hien_tai += 1
+            ma_moi = "T" + str(so_hien_tai).zfill(3)
+        else:
+            ma_moi = "T001"
+        return ma_moi
+    except:
+        return "T001"
+
 
 # ------------------ HÀM HIỂN THỊ DỮ LIỆU ------------------
 def hien_thi_du_lieu():
@@ -49,15 +64,23 @@ trang_thai = None
 def them_tuyen():
     global trang_thai
     trang_thai = "them"
-    ma = entry_matuyen.get().strip()
+    
+    # Tự động sinh mã tuyến
+    ma = tao_ma_tuyen_tu_dong()
     di = entry_ddDi.get()
     den = entry_ddDen.get()
 
-    if not ma or di == "Chọn địa điểm đi" or den == "Chọn địa điểm đến":
-        messagebox.showwarning("Thiếu thông tin", "Vui lòng nhập đủ dữ liệu!")
+    if di == "Chọn địa điểm đi" or den == "Chọn địa điểm đến":
+        messagebox.showwarning("Thiếu thông tin", "Vui lòng chọn đầy đủ địa điểm đi và đến!")
         return
 
+    # Thêm vào Treeview
+    '''tree.insert("", "end", values=(ma, di, den))
+    messagebox.showinfo("Thành công", f"Đã thêm tuyến mới: {ma}")'''
 
+    # Xóa chọn sau khi thêm
+    entry_ddDi.set("Chọn địa điểm đi")
+    entry_ddDen.set("Chọn địa điểm đến")
     # ====== Thêm dữ liệu vào Treeview ======
     tree.insert("", "end", values=(ma, di, den))
 
@@ -147,8 +170,6 @@ tree.configure(yscroll=scrollbar.set)
 scrollbar.pack(side="right", fill="y")
 # Hiển thị bảng
 tree.pack(fill="both", expand=True)
-tree.place(relx=0.5, rely=0.5, anchor="center", width=720, height=240)
-
 
 
 # combo box

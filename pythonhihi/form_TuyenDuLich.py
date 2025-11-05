@@ -57,6 +57,7 @@ def them_tuyen():
         messagebox.showwarning("Thiếu thông tin", "Vui lòng nhập đủ dữ liệu!")
         return
 
+
     # ====== Thêm dữ liệu vào Treeview ======
     tree.insert("", "end", values=(ma, di, den))
 
@@ -120,9 +121,36 @@ def luu_tuyen():
 
 def thoat():
     root.destroy()
+def home():
+    root.destroy()
+
 
 # ------------------ GIAO DIỆN ------------------
 tk.Label(root, text="Quản Lý Tuyến Du Lịch", font=("Arial", 20, "bold"), bg="#fff8dc").place(x=370, y=45)
+# === KHUNG DANH SÁCH TUYẾN DU LỊCH ===
+frame_info = tk.LabelFrame(root, text="Danh sách tuyến du lịch", font=("Arial", 12, "bold"), bg="#fff8dc", width=750, height=280)
+frame_info.place(x=120, y=300)
+# Định nghĩa các cột
+columns = ("maTuyen", "ddDi", "ddDen")
+tree = ttk.Treeview(frame_info, columns=columns, show="headings", height=10)
+# Cấu hình tiêu đề cột
+tree.heading("maTuyen", text="Mã Tuyến", anchor = 'center')
+tree.heading("ddDi", text="Địa Điểm Đi",anchor = 'center')
+tree.heading("ddDen", text="Địa Điểm Đến", anchor = 'center')
+# Cấu hình độ rộng và căn giữa từng cột
+tree.column("maTuyen", width=120, anchor="center")
+tree.column("ddDi", width=250, anchor="center")
+tree.column("ddDen", width=250, anchor="center")
+# Thêm thanh cuộn dọc
+scrollbar = ttk.Scrollbar(frame_info, orient="vertical", command=tree.yview)
+tree.configure(yscroll=scrollbar.set)
+scrollbar.pack(side="right", fill="y")
+# Hiển thị bảng
+tree.pack(fill="both", expand=True)
+tree.place(relx=0.5, rely=0.5, anchor="center", width=720, height=240)
+
+
+
 # combo box
 mien_bac = ["Tràng An-Tam Cốc-Bái Đính-Hoa Lư", "Mộc Châu-Điện Biên-Sapa", "Hà Giang-Cao Bằng", "Ninh Bình-Hạ Long-Sapa", "Vịnh Hạ Long-Hạ Long Park-Bãi Cháy-Yên Tử"]
 mien_trung = ["Quy Nhơn-Phú Yên", "Pleiku-Kontum- Măng Đen", "Hội An-Bà Nà Hills-Núi Thần Tài", "Phan Thiết-Mũi Né", "Quảng Bình-Suối Moọc- Động Thiên Đường"]
@@ -189,6 +217,9 @@ btn_luu.place(x=850, y=420)
 
 btn_thoat = tk.Button(root, text="Thoát", bg="#87cefa", font=("Arial", 12, "bold"), width=10, command=thoat)
 btn_thoat.place(x=850, y=500)
+
+btn_home = tk.Button(root, text="Về Trang Chủ", font=("Arial", 10, "bold"), bg="white", relief="groove", command=home)
+btn_home.place(x=50, y=30)
 
 # Hiển thị dữ liệu khi mở form
 hien_thi_du_lieu()

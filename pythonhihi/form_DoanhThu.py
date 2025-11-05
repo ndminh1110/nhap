@@ -1,6 +1,8 @@
 import tkinter as tk
 from tkinter import ttk
 
+def ve_trang_chu():
+    root.destroy()
 # ===========================
 # TẠO CỬA SỔ CHÍNH
 # ===========================
@@ -9,11 +11,9 @@ root.title("Form6 - Doanh Thu")
 root.geometry("1000x650")
 root.configure(bg="#FFFACD")  # màu nền vàng nhạt
 
-# ===========================
+
 # NÚT VỀ TRANG CHỦ
-# ===========================
-btn_home = tk.Button(root, text="Về Trang Chủ", font=("Times New Roman", 12, "bold"),
-                     bg="white", relief="raised", width=15)
+btn_home = tk.Button(root, text="Về Trang Chủ", font=("Times New Roman", 10, "bold"), bg="white", relief="groove", command=ve_trang_chu)
 btn_home.place(x=50, y=40)
 
 # ===========================
@@ -79,8 +79,7 @@ btn_xem.place(x=650, y=180)
 # ===========================
 # KHUNG THÔNG TIN
 # ===========================
-frame_info = tk.LabelFrame(root, text="Thông tin nhân viên", font=("Times New Roman", 12, "bold"),
-                           bg="#FFFACD")
+frame_info = tk.LabelFrame(root, text="Thông tin nhân viên", font=("Times New Roman", 12, "bold"),bg="#FFFACD")
 frame_info.place(x=90, y=350, width=820, height=230)
 
 text_info = tk.Text(frame_info, width=100, height=10)

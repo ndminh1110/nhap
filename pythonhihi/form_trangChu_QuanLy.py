@@ -1,4 +1,30 @@
 import tkinter as tk
+import subprocess
+
+def open_form_KhachHang():
+    #root.destroy()  # Đóng form 1
+    subprocess.Popen(["python", "form_KhachHang.py"])  # Mở form 2
+
+def open_form_NhanVien():
+    #root.destroy()  # Đóng form 1
+    subprocess.Popen(["python", "form_NhanVien.py"])  # Mở form 2
+
+def open_form_ChuyenDi():
+    #root.destroy()  # Đóng form 1
+    subprocess.Popen(["python", "form_ChuyenDi.py"])  # Mở form 2
+
+def open_form_TuyenDuLich():
+    #root.destroy()  # Đóng form 1
+    subprocess.Popen(["python", "form_TuyenDuLich.py"])  # Mở form 2
+
+def open_form_DatVe():  
+    #root.destroy()  # Đóng form 1
+    subprocess.Popen(["python", "form_DatVe.py"])  # Mở form 2
+
+def open_form_DoanhThu():
+    #root.destroy()  # Đóng form 1
+    subprocess.Popen(["python", "form_DoanhThu.py"])  # Mở form 2
+
 
 def thoat():
     root.destroy()
@@ -14,16 +40,16 @@ frame.place(relx=0.5, rely=0.5, anchor="center")
 tk.Label(frame, text="Trang Chủ", font=("Arial", 26, "bold"), bg="#FFFACD").grid(row=0, column=0, columnspan=2, pady=20)
 
 # Hàng 1
-tk.Button(frame, text="Quản Lý Khách Hàng", bg="#ADD8E6", font=("Arial", 14), width=20, height=2).grid(row=1, column=0, padx=30, pady=20)
-tk.Button(frame, text="Quản Lý Nhân Viên", bg="#ADD8E6", font=("Arial", 14), width=20, height=2).grid(row=1, column=1, padx=30, pady=20)
+tk.Button(frame, text="Quản Lý Khách Hàng", bg="#ADD8E6", font=("Arial", 14), width=20, height=2, command=open_form_KhachHang).grid(row=1, column=0, padx=30, pady=20)
+tk.Button(frame, text="Quản Lý Nhân Viên", bg="#ADD8E6", font=("Arial", 14), width=20, height=2, command=open_form_NhanVien).grid(row=1, column=1, padx=30, pady=20)
 
 # Hàng 2
-tk.Button(frame, text="Quản Lý Chuyến Đi", bg="#ADD8E6", font=("Arial", 14), width=20, height=2).grid(row=2, column=0, padx=30, pady=20)
-tk.Button(frame, text="Quản Lý Tuyến Du Lịch", bg="#ADD8E6", font=("Arial", 14), width=20, height=2).grid(row=2, column=1, padx=30, pady=20)
+tk.Button(frame, text="Quản Lý Chuyến Đi", bg="#ADD8E6", font=("Arial", 14), width=20, height=2, command= open_form_ChuyenDi).grid(row=2, column=0, padx=30, pady=20)
+tk.Button(frame, text="Quản Lý Tuyến Du Lịch", bg="#ADD8E6", font=("Arial", 14), width=20, height=2, command=open_form_TuyenDuLich).grid(row=2, column=1, padx=30, pady=20)
 
 # Hàng 3
-tk.Button(frame, text="Quản Lý Đặt Vé", bg="#ADD8E6", font=("Arial", 14), width=20, height=2).grid(row=3, column=0, padx=30, pady=20)
-tk.Button(frame, text="Quản Lý Doanh Thu", bg="#ADD8E6", font=("Arial", 14), width=20, height=2).grid(row=3, column=1, padx=30, pady=20)
+tk.Button(frame, text="Quản Lý Đặt Vé", bg="#ADD8E6", font=("Arial", 14), width=20, height=2, command= open_form_DatVe).grid(row=3, column=0, padx=30, pady=20)
+tk.Button(frame, text="Quản Lý Doanh Thu", bg="#ADD8E6", font=("Arial", 14), width=20, height=2, command= open_form_DoanhThu).grid(row=3, column=1, padx=30, pady=20)
 
 # Nút thoát
 tk.Button(root, text="Thoát", font=("Arial", 12), command=thoat).place(x=920, y=600)

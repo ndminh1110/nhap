@@ -1,6 +1,14 @@
 import tkinter as tk
 from tkinter import ttk
 from tkcalendar import DateEntry
+import pyodbc
+
+conn = pyodbc.connect(
+            'DRIVER={SQL Server};'
+            'SERVER=ADMIN-PC;'          # hoặc tên server thật, ví dụ: LAPTOP\\SQLEXPRESS
+            'DATABASE=QuanLyTuyenDuLich;'
+            'Trusted_Connection=yes;'    # Nếu bạn dùng Windows Authentication
+        )
 
 def ve_trang_chu():
     root.destroy()
@@ -30,7 +38,7 @@ root.configure(bg="#FFFACD")
 
 # ========== Nút Về Trang Chủ ==========
 btn_home = tk.Button(root, text="Về Trang Chủ", font=("Times New Roman", 10, "bold"), bg="white", relief="groove", command=ve_trang_chu)
-btn_home.place(x=50, y=20)
+btn_home.place(x=50, y=30)
 
 # ========== Tiêu đề ==========
 lbl_title = tk.Label(root, text="Quản Lý Khách Hàng", bg="#FFFACD", fg="black", font=("Times New Roman", 22, "bold"))
@@ -66,23 +74,27 @@ entry_diachi = tk.Entry(frame_info, width=30)
 entry_diachi.grid(row=2, column=3, padx=10, pady=5, columnspan=2)
 
 # ========== Khung Thông tin khách hàng ==========
-frame_table = tk.LabelFrame(root, text="Thông tin khách hàng", bg="#FFFACD", font=("Times New Roman", 11, "bold"), width=700, height=350)
-frame_table.place(x=60, y=270)
-
-#text_thongtin = tk.Text(frame_table, width=650, height=12)
-#text_thongtin.pack(padx=10, pady=10)
-
-'''# === KHUNG THÔNG TIN NHÂN VIÊN ===
-frame_info = tk.LabelFrame(root, text="Thông tin nhân viên", font=("Arial", 12, "bold"), bg="#fff8dc", width=750, height=280)
-frame_info.place(x=50, y=270)
+frame_info = tk.LabelFrame(root, text="Thông tin khách hàng", font=("Times New Roman", 12), bg="#fff8dc", width=750, height=350)
+frame_info.place(x=50, y=220)
 
 # Bảng dữ liệu (Treeview)
-columns = ("ma_tuyen", "khoi_hanh", "den")
+columns = ("ma_khach", "ten_khach_hang", "so_dien_thoai", "gioi_tinh", "ngay_sinh", "dia_chi")
 tree = ttk.Treeview(frame_info, columns=columns, show="headings", height=10)
-tree.heading("ma_tuyen", text="Mã Tuyến")
-tree.heading("khoi_hanh", text="Địa Điểm Khởi Hành")
-tree.heading("den", text="Địa Điểm Đến")
-tree.place(x=10, y=10, width=725, height=240)'''
+tree.heading("ma_khach", text="Mã Khách Hàng")
+tree.heading("ten_khach_hang", text="Tên Khách Hàng")
+tree.heading("so_dien_thoai", text="Số Điện Thoại")
+tree.heading("gioi_tinh", text="Giới Tính")
+tree.heading("ngay_sinh", text="Ngày Sinh")
+tree.heading("dia_chi", text="Địa Chỉ")
+
+tree.column("ma_khach", width=95)
+tree.column("ten_khach_hang", width=130)
+tree.column("so_dien_thoai", width=130)
+tree.column("gioi_tinh", width=60)
+tree.column("ngay_sinh", width=130)
+tree.column("dia_chi", width=250)
+
+tree.place(x=10, y=10, width=725, height=310)
 
 # ========== Các nút chức năng bên phải ==========
 button_style = {"font": ("Times New Roman", 13, "bold"), "bg": "#B0E0E6", "width": 8, "height": 1}
@@ -100,9 +112,9 @@ btn_huy = tk.Button(root, text="Hủy", **button_style, command=huy)
 btn_huy.place(x=820, y=360)
 
 btn_luu = tk.Button(root, text="Lưu", **button_style, command=luu)
-btn_luu.place(x=820, y=420)
+btn_luu.place(x=820, y=440)
 
 btn_thoat = tk.Button(root, text="Thoát", **button_style, command=thoat)
-btn_thoat.place(x=820, y=500)
+btn_thoat.place(x=820, y=520)
 
 root.mainloop()

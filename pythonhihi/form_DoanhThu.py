@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
 import pyodbc
-
+# ĐÃ UPDATE HẾTTTT 
 # ------------------ KẾT NỐI SQL SERVER ------------------
 
 conn = pyodbc.connect(

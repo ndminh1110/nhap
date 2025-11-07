@@ -15,19 +15,20 @@ cursor = conn.cursor()
 
 # ------------------ HÀM ------------------
 def load_data():
-    """Load dữ liệu từ CSDL lên Treeview"""
     for i in tree.get_children():
         tree.delete(i)
-    cursor.execute("SELECT maKh, hoTen, sdt, phai, ngsinh, dchi FROM KHACHHANG")
+    cursor.execute("SELECT maNV, hoTen, chucVu, sdt, phai, ngsinh, dchi, luong FROM NHANVIEN")
     rows = cursor.fetchall()
     for row in rows:
-        tree.insert("", "end", values=(row[0].strip(), row[1].strip(), row[2], row[3], row[4], row[5].strip()))
+        tree.insert("", "end", values=(
+            row[0].strip(), row[1].strip(), row[2] if row[2] else "", row[3], row[4],
+            row[5], row[6] if row[6] else "", row[7] if row[7] else 0
+        ))
 
-def auto_maKh():
-    """Tự động sinh mã khách hàng mới dựa vào Treeview, lấp khoảng trống"""
+def auto_maNV():
     ma_list = [tree.item(item)['values'][0].strip() for item in tree.get_children()]
     if not ma_list:
-        return "KH0001"
+        return "NV0001"
     so_list = sorted([int(ma[2:]) for ma in ma_list if ma[2:].isdigit()])
     next_num = 1
     for num in so_list:
@@ -35,114 +36,130 @@ def auto_maKh():
             next_num += 1
         elif num > next_num:
             break
-    return f"KH{next_num:04d}"
+    return f"NV{next_num:04d}"
 
 def lam_moi_form():
-    entry_maKh.config(state='normal')
-    entry_maKh.delete(0, tk.END)
-    entry_maKh.insert(0, auto_maKh())
-    entry_maKh.config(state='readonly')
+    entry_maNV.config(state='normal')
+    entry_maNV.delete(0, tk.END)
+    entry_maNV.insert(0, auto_maNV())
+    entry_maNV.config(state='readonly')
 
     entry_ten.delete(0, tk.END)
+    entry_chucvu.delete(0, tk.END)
     entry_sdt.delete(0, tk.END)
     entry_diachi.delete(0, tk.END)
+    entry_luong.delete(0, tk.END)
+
     gender.set("Nam")
     date_ngaysinh.set_date(date.today())
 
 def them():
-    maKh = auto_maKh()
-    hoTen = entry_ten.get().strip()
-    sdt = entry_sdt.get().strip()
-    phai = gender.get()  
-    ngsinh = date_ngaysinh.get_date().strftime('%Y-%m-%d')
-    dchi = entry_diachi.get().strip()
-
-    if not hoTen or not sdt or not dchi:
-        messagebox.showwarning("Thiếu dữ liệu", "Vui lòng nhập đầy đủ thông tin!")
-        return
-    if not (sdt.isdigit() and len(sdt) == 10 and sdt.startswith("0")):
-        messagebox.showerror("Lỗi", "Số điện thoại phải bắt đầu bằng 0 và đủ 10 số!")
-        return
-
-    tree.insert("", "end", values=(maKh, hoTen, sdt, phai, ngsinh, dchi))
-    messagebox.showinfo("Thành công", f"Đã thêm khách hàng {hoTen} với mã {maKh}")
     lam_moi_form()
+    entry_ten.focus()
 
 def xoa():
     selected = tree.selection()
     if not selected:
-        messagebox.showwarning("Chưa chọn", "Vui lòng chọn khách hàng để xóa!")
+        messagebox.showwarning("Chưa chọn", "Vui lòng chọn nhân viên để xóa!")
         return
     confirm = messagebox.askyesno("Xác nhận", "Bạn có chắc muốn xóa?")
     if confirm:
-        tree.delete(selected[0])
+        maNV = tree.item(selected[0])['values'][0]
+        cursor.execute("DELETE FROM NHANVIEN WHERE maNV=?", (maNV,))
+        conn.commit()
+        load_data()
         lam_moi_form()
 
 def sua():
     selected = tree.selection()
     if not selected:
-        messagebox.showwarning("Chưa chọn", "Vui lòng chọn khách hàng để sửa!")
+        messagebox.showwarning("Chưa chọn", "Vui lòng chọn nhân viên để sửa!")
         return
-
-    ma = tree.item(selected[0])['values'][0].strip()
+    ma = tree.item(selected[0])['values'][0]
     ten = entry_ten.get().strip()
+    chucvu = entry_chucvu.get().strip()
     sdt = entry_sdt.get().strip()
     gioi_tinh = gender.get()
     ngsinh = date_ngaysinh.get_date().strftime('%Y-%m-%d')
     dchi = entry_diachi.get().strip()
+    try:
+        luong_val = float(entry_luong.get())
+        if luong_val < 0:
+            raise ValueError
+    except:
+        messagebox.showerror("Lỗi", "Lương phải là số dương hợp lệ!")
+        return
 
-    if not ten or not sdt or not dchi:
+    if not ten or not sdt:
         messagebox.showwarning("Thiếu dữ liệu", "Vui lòng nhập đầy đủ thông tin!")
         return
     if not (sdt.isdigit() and len(sdt) == 10 and sdt.startswith("0")):
         messagebox.showerror("Lỗi", "Số điện thoại phải bắt đầu bằng 0 và đủ 10 số!")
         return
 
-    tree.item(selected[0], values=(ma, ten, sdt, gioi_tinh, ngsinh, dchi))
-    messagebox.showinfo("Thành công", "Đã cập nhật thông tin khách hàng!")
+    cursor.execute(
+        "UPDATE NHANVIEN SET hoTen=?, chucVu=?, sdt=?, phai=?, ngsinh=?, dchi=?, luong=? WHERE maNV=?",
+        (ten, chucvu, sdt, gioi_tinh, ngsinh, dchi, luong_val, ma)
+    )
+    conn.commit()
+    messagebox.showinfo("Thành công", "Đã cập nhật thông tin nhân viên!")
+    load_data()
     lam_moi_form()
 
 def hien_thi_chi_tiet(event):
     selected = tree.selection()
     if selected:
-        ma, ten, sdt, phai_val, ngsinh, dchi = tree.item(selected[0], "values")
-        entry_maKh.config(state='normal')
-        entry_maKh.delete(0, tk.END)
-        entry_maKh.insert(0, ma)
-        entry_maKh.config(state='readonly')
+        ma, ten, chucvu, sdt_val, phai_val, ngsinh_val, dchi_val, luong_val = tree.item(selected[0], "values")
+        entry_maNV.config(state='normal')
+        entry_maNV.delete(0, tk.END)
+        entry_maNV.insert(0, ma)
+        entry_maNV.config(state='readonly')
 
         entry_ten.delete(0, tk.END)
         entry_ten.insert(0, ten)
 
+        entry_chucvu.delete(0, tk.END)
+        entry_chucvu.insert(0, chucvu)
+
         entry_sdt.delete(0, tk.END)
-        entry_sdt.insert(0, sdt)
+        entry_sdt.insert(0, sdt_val)
 
         gender.set(phai_val)
 
-        if isinstance(ngsinh, str):
-            year, month, day = map(int, ngsinh.split('-'))
+        if isinstance(ngsinh_val, str) and ngsinh_val:
+            year, month, day = map(int, ngsinh_val.split('-'))
             date_ngaysinh.set_date(date(year, month, day))
         else:
-            date_ngaysinh.set_date(ngsinh)
+            date_ngaysinh.set_date(date.today())
 
         entry_diachi.delete(0, tk.END)
-        entry_diachi.insert(0, dchi)
+        entry_diachi.insert(0, dchi_val)
+
+        entry_luong.delete(0, tk.END)
+        entry_luong.insert(0, luong_val)
 
 def huy():
     lam_moi_form()
 
 def luu():
     for item in tree.get_children():
-        maKh, hoTen, sdt, phai_val, ngsinh, dchi = tree.item(item, "values")
-        # Kiểm tra số điện thoại hợp lệ trước khi lưu
-        if not (sdt.isdigit() and len(sdt) == 10 and sdt.startswith("0")):
-            messagebox.showwarning("Bỏ qua", f"SĐT {sdt} của {hoTen} không hợp lệ, không lưu vào CSDL!")
+        maNV, hoTen, chucvu, sdt_val, phai_val, ngsinh_val, dchi_val, luong_val = tree.item(item, "values")
+        # Kiểm tra dữ liệu hợp lệ
+        if not (sdt_val.isdigit() and len(sdt_val) == 10 and sdt_val.startswith("0")):
+            messagebox.showwarning("Bỏ qua", f"SĐT {sdt_val} của {hoTen} không hợp lệ, không lưu vào CSDL!")
             continue
-        cursor.execute("SELECT 1 FROM KHACHHANG WHERE maKh=?", (maKh,))
+        try:
+            luong_val = float(luong_val)
+            if luong_val < 0:
+                raise ValueError
+        except:
+            messagebox.showwarning("Bỏ qua", f"Lương của {hoTen} không hợp lệ, không lưu!")
+            continue
+        cursor.execute("SELECT 1 FROM NHANVIEN WHERE maNV=?", (maNV,))
         if not cursor.fetchone():
             cursor.execute(
-                "INSERT INTO KHACHHANG (maKh, hoTen, sdt, phai, ngsinh, dchi) VALUES (?, ?, ?, ?, ?, ?)",
-                (maKh, hoTen, sdt, phai_val, ngsinh, dchi)
+                "INSERT INTO NHANVIEN (maNV, hoTen, chucVu, sdt, phai, ngsinh, dchi, luong) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                (maNV, hoTen, chucvu, sdt_val, phai_val, ngsinh_val, dchi_val, luong_val)
             )
     conn.commit()
     messagebox.showinfo("Thành công", "Đã lưu dữ liệu vào CSDL!")
@@ -150,29 +167,34 @@ def luu():
     lam_moi_form()
 
 def thoat():
-    root.quit()
+    conn.close()
+    root.destroy()
 
 # ------------------ GIAO DIỆN ------------------
 root = tk.Tk()
-root.title("Quản Lý Khách Hàng")
-root.geometry("1000x650")
+root.title("Quản Lý Nhân Viên")
+root.geometry("1100x650")
 root.configure(bg="#FFFACD")
 
 # Tiêu đề
-tk.Label(root, text="Quản Lý Khách Hàng", bg="#FFFACD", fg="black", font=("Times New Roman", 22, "bold")).place(x=330, y=20)
+tk.Label(root, text="Quản Lý Nhân Viên", bg="#FFFACD", fg="black", font=("Times New Roman", 22, "bold")).place(x=380, y=20)
 
 # Form nhập liệu
-frame_input = tk.Frame(root, bg="#FFFACD", width=900, height=120)
-frame_input.place(x=50, y=70)
+frame_input = tk.Frame(root, bg="#FFFACD", width=1050, height=150)
+frame_input.place(x=25, y=70)
 
-tk.Label(frame_input, text="Mã Khách Hàng", bg="#FFFACD").place(x=10, y=10)
-entry_maKh = tk.Entry(frame_input, width=10)
-entry_maKh.place(x=130, y=10)
-entry_maKh.config(state='readonly')
+tk.Label(frame_input, text="Mã NV", bg="#FFFACD").place(x=10, y=10)
+entry_maNV = tk.Entry(frame_input, width=10)
+entry_maNV.place(x=100, y=10)
+entry_maNV.config(state='readonly')
 
-tk.Label(frame_input, text="Tên Khách Hàng", bg="#FFFACD").place(x=200, y=10)
+tk.Label(frame_input, text="Họ Tên", bg="#FFFACD").place(x=200, y=10)
 entry_ten = tk.Entry(frame_input, width=30)
-entry_ten.place(x=320, y=10)
+entry_ten.place(x=280, y=10)
+
+tk.Label(frame_input, text="Chức Vụ", bg="#FFFACD").place(x=520, y=10)
+entry_chucvu = tk.Entry(frame_input, width=20)
+entry_chucvu.place(x=600, y=10)
 
 tk.Label(frame_input, text="Giới Tính", bg="#FFFACD").place(x=10, y=50)
 gender = tk.StringVar(value="Nam")
@@ -183,43 +205,41 @@ tk.Label(frame_input, text="Ngày Sinh", bg="#FFFACD").place(x=200, y=50)
 date_ngaysinh = DateEntry(frame_input, width=12, background='darkblue', foreground='white', borderwidth=2, date_pattern='dd/mm/yyyy')
 date_ngaysinh.place(x=280, y=50)
 
-tk.Label(frame_input, text="Số Điện Thoại", bg="#FFFACD").place(x=400, y=50)
-entry_sdt = tk.Entry(frame_input, width=30)
-entry_sdt.place(x=530, y=50)
+tk.Label(frame_input, text="SĐT", bg="#FFFACD").place(x=400, y=50)
+entry_sdt = tk.Entry(frame_input, width=20)
+entry_sdt.place(x=450, y=50)
 
 tk.Label(frame_input, text="Địa Chỉ", bg="#FFFACD").place(x=10, y=90)
-entry_diachi = tk.Entry(frame_input, width=70)
-entry_diachi.place(x=130, y=90)
+entry_diachi = tk.Entry(frame_input, width=50)
+entry_diachi.place(x=100, y=90)
+
+tk.Label(frame_input, text="Lương", bg="#FFFACD").place(x=520, y=90)
+entry_luong = tk.Entry(frame_input, width=20)
+entry_luong.place(x=600, y=90)
 
 # Treeview + Scrollbar
-frame_tree = tk.LabelFrame(root, text="Danh sách khách hàng", font=("Times New Roman", 12), bg="#fff8dc", width=800, height=400)
-frame_tree.place(x=50, y=200)
+frame_tree = tk.LabelFrame(root, text="Danh sách nhân viên", font=("Times New Roman", 12), bg="#fff8dc", width=1050, height=400)
+frame_tree.place(x=25, y=230)
 
-columns = ("maKh", "hoTen", "sdt", "phai", "ngsinh", "dchi")
+columns = ("maNV", "hoTen", "chucVu", "sdt", "phai", "ngsinh", "dchi", "luong")
 tree = ttk.Treeview(frame_tree, columns=columns, show="headings")
-tree.heading("maKh", text="Mã Khách Hàng")
-tree.heading("hoTen", text="Họ tên")
-tree.heading("sdt", text="Số điện thoại")
-tree.heading("phai", text="Giới Tính")
-tree.heading("ngsinh", text="Ngày Sinh")
-tree.heading("dchi", text="Địa Chỉ")
-tree.column("maKh", width = 100, anchor="center")
-tree.column("hoTen", width = 150)
-tree.column("sdt", width = 120, anchor="center")
-tree.column("phai", width = 80, anchor="center")
-tree.column("ngsinh", width = 100, anchor="center")
-tree.column("dchi", width = 250)
-
-'''for col, width in zip(columns, [100, 150, 120, 80, 100, 250]):
-    tree.heading(col, text=col, anchor= "center")
-    tree.column(col, width=width, anchor="center")'''
+for col in columns:
+    tree.heading(col, text=col)
+tree.column("maNV", width=80, anchor="center")
+tree.column("hoTen", width=150)
+tree.column("chucVu", width=100)
+tree.column("sdt", width=120, anchor="center")
+tree.column("phai", width=80, anchor="center")
+tree.column("ngsinh", width=100, anchor="center")
+tree.column("dchi", width=200)
+tree.column("luong", width=100, anchor="center")
 
 scrollbar_v = ttk.Scrollbar(frame_tree, orient="vertical", command=tree.yview)
 scrollbar_h = ttk.Scrollbar(frame_tree, orient="horizontal", command=tree.xview)
 tree.configure(yscrollcommand=scrollbar_v.set, xscrollcommand=scrollbar_h.set)
-tree.place(x=10, y=10, width=760, height=340)
-scrollbar_v.place(x=770, y=10, width=20, height=360)
-scrollbar_h.place(x=10, y=350, width=750, height=20)
+tree.place(x=10, y=10, width=1020, height=340)
+scrollbar_v.place(x=1030, y=10, width=20, height=340)
+scrollbar_h.place(x=10, y=350, width=1020, height=20)
 
 # Bind chọn dòng Treeview
 tree.bind("<<TreeviewSelect>>", hien_thi_chi_tiet)

@@ -1,121 +1,240 @@
 import tkinter as tk
-from tkinter import ttk
+from tkinter import ttk, messagebox
 from tkcalendar import DateEntry
+from datetime import date
 import pyodbc
 
+# ------------------ KẾT NỐI SQL SERVER ------------------
 conn = pyodbc.connect(
-            'DRIVER={SQL Server};'
-            'SERVER=ADMIN-PC;'          # hoặc tên server thật, ví dụ: LAPTOP\\SQLEXPRESS
-            'DATABASE=QuanLyTuyenDuLich;'
-            'Trusted_Connection=yes;'    # Nếu bạn dùng Windows Authentication
-        )
+    'DRIVER={SQL Server};'
+    'SERVER=localhost\\SQLEXPRESS01;'
+    'DATABASE=QuanLyTuyenDuLich;'
+    'Trusted_Connection=yes;'
+)
+cursor = conn.cursor()
 
+# ------------------ HÀM ------------------
+def load_data():
+    """Load dữ liệu từ CSDL lên Treeview"""
+    for i in tree.get_children():
+        tree.delete(i)
+    cursor.execute("SELECT maKh, hoTen, sdt, phai, ngsinh, dchi FROM KHACHHANG")
+    rows = cursor.fetchall()
+    for row in rows:
+        tree.insert("", "end", values=(row[0].strip(), row[1].strip(), row[2], row[3], row[4], row[5].strip()))
 
-def ve_trang_chu():
-    root.destroy()
+def auto_maKh():
+    """Tự động sinh mã khách hàng mới dựa vào Treeview, lấp khoảng trống"""
+    ma_list = [tree.item(item)['values'][0].strip() for item in tree.get_children()]
+    if not ma_list:
+        return "KH0001"
+    so_list = sorted([int(ma[2:]) for ma in ma_list if ma[2:].isdigit()])
+    next_num = 1
+    for num in so_list:
+        if num == next_num:
+            next_num += 1
+        elif num > next_num:
+            break
+    return f"KH{next_num:04d}"
+
+def lam_moi_form():
+    entry_maKh.config(state='normal')
+    entry_maKh.delete(0, tk.END)
+    entry_maKh.insert(0, auto_maKh())
+    entry_maKh.config(state='readonly')
+
+    entry_ten.delete(0, tk.END)
+    entry_sdt.delete(0, tk.END)
+    entry_diachi.delete(0, tk.END)
+    gender.set("Nam")
+    date_ngaysinh.set_date(date.today())
 
 def them():
-    print("Thêm khách hàng")
+    maKh = auto_maKh()
+    hoTen = entry_ten.get().strip()
+    sdt = entry_sdt.get().strip()
+    phai = gender.get()  
+    ngsinh = date_ngaysinh.get_date().strftime('%Y-%m-%d')
+    dchi = entry_diachi.get().strip()
+
+    if not hoTen or not sdt or not dchi:
+        messagebox.showwarning("Thiếu dữ liệu", "Vui lòng nhập đầy đủ thông tin!")
+        return
+    if not (sdt.isdigit() and len(sdt) == 10 and sdt.startswith("0")):
+        messagebox.showerror("Lỗi", "Số điện thoại phải bắt đầu bằng 0 và đủ 10 số!")
+        return
+
+    tree.insert("", "end", values=(maKh, hoTen, sdt, phai, ngsinh, dchi))
+    messagebox.showinfo("Thành công", f"Đã thêm khách hàng {hoTen} với mã {maKh}")
+    lam_moi_form()
 
 def xoa():
-    pass
+    selected = tree.selection()
+    if not selected:
+        messagebox.showwarning("Chưa chọn", "Vui lòng chọn khách hàng để xóa!")
+        return
+    confirm = messagebox.askyesno("Xác nhận", "Bạn có chắc muốn xóa?")
+    if confirm:
+        tree.delete(selected[0])
+        lam_moi_form()
 
 def sua():
-    pass
+    selected = tree.selection()
+    if not selected:
+        messagebox.showwarning("Chưa chọn", "Vui lòng chọn khách hàng để sửa!")
+        return
+
+    ma = tree.item(selected[0])['values'][0].strip()
+    ten = entry_ten.get().strip()
+    sdt = entry_sdt.get().strip()
+    gioi_tinh = gender.get()
+    ngsinh = date_ngaysinh.get_date().strftime('%Y-%m-%d')
+    dchi = entry_diachi.get().strip()
+
+    if not ten or not sdt or not dchi:
+        messagebox.showwarning("Thiếu dữ liệu", "Vui lòng nhập đầy đủ thông tin!")
+        return
+    if not (sdt.isdigit() and len(sdt) == 10 and sdt.startswith("0")):
+        messagebox.showerror("Lỗi", "Số điện thoại phải bắt đầu bằng 0 và đủ 10 số!")
+        return
+
+    tree.item(selected[0], values=(ma, ten, sdt, gioi_tinh, ngsinh, dchi))
+    messagebox.showinfo("Thành công", "Đã cập nhật thông tin khách hàng!")
+    lam_moi_form()
+
+def hien_thi_chi_tiet(event):
+    selected = tree.selection()
+    if selected:
+        ma, ten, sdt, phai_val, ngsinh, dchi = tree.item(selected[0], "values")
+        entry_maKh.config(state='normal')
+        entry_maKh.delete(0, tk.END)
+        entry_maKh.insert(0, ma)
+        entry_maKh.config(state='readonly')
+
+        entry_ten.delete(0, tk.END)
+        entry_ten.insert(0, ten)
+
+        entry_sdt.delete(0, tk.END)
+        entry_sdt.insert(0, sdt)
+
+        gender.set(phai_val)
+
+        if isinstance(ngsinh, str):
+            year, month, day = map(int, ngsinh.split('-'))
+            date_ngaysinh.set_date(date(year, month, day))
+        else:
+            date_ngaysinh.set_date(ngsinh)
+
+        entry_diachi.delete(0, tk.END)
+        entry_diachi.insert(0, dchi)
 
 def huy():
-    pass
+    lam_moi_form()
 
 def luu():
-    pass
+    for item in tree.get_children():
+        maKh, hoTen, sdt, phai_val, ngsinh, dchi = tree.item(item, "values")
+        # Kiểm tra số điện thoại hợp lệ trước khi lưu
+        if not (sdt.isdigit() and len(sdt) == 10 and sdt.startswith("0")):
+            messagebox.showwarning("Bỏ qua", f"SĐT {sdt} của {hoTen} không hợp lệ, không lưu vào CSDL!")
+            continue
+        cursor.execute("SELECT 1 FROM KHACHHANG WHERE maKh=?", (maKh,))
+        if not cursor.fetchone():
+            cursor.execute(
+                "INSERT INTO KHACHHANG (maKh, hoTen, sdt, phai, ngsinh, dchi) VALUES (?, ?, ?, ?, ?, ?)",
+                (maKh, hoTen, sdt, phai_val, ngsinh, dchi)
+            )
+    conn.commit()
+    messagebox.showinfo("Thành công", "Đã lưu dữ liệu vào CSDL!")
+    load_data()
+    lam_moi_form()
 
 def thoat():
     root.quit()
 
+# ------------------ GIAO DIỆN ------------------
 root = tk.Tk()
 root.title("Quản Lý Khách Hàng")
 root.geometry("1000x650")
 root.configure(bg="#FFFACD")
 
-# ========== Nút Về Trang Chủ ==========
-btn_home = tk.Button(root, text="Về Trang Chủ", font=("Times New Roman", 10, "bold"), bg="white", relief="groove", command=ve_trang_chu)
-btn_home.place(x=50, y=30)
+# Tiêu đề
+tk.Label(root, text="Quản Lý Khách Hàng", bg="#FFFACD", fg="black", font=("Times New Roman", 22, "bold")).place(x=330, y=20)
 
-# ========== Tiêu đề ==========
-lbl_title = tk.Label(root, text="Quản Lý Khách Hàng", bg="#FFFACD", fg="black", font=("Times New Roman", 22, "bold"))
-lbl_title.place(x=330, y=20)
+# Form nhập liệu
+frame_input = tk.Frame(root, bg="#FFFACD", width=900, height=120)
+frame_input.place(x=50, y=70)
 
-# ========== Thông tin khách hàng ==========
-frame_info = tk.Frame(root, bg="#FFFACD")
-frame_info.place(x=100, y=100)
+tk.Label(frame_input, text="Mã Khách Hàng", bg="#FFFACD").place(x=10, y=10)
+entry_maKh = tk.Entry(frame_input, width=10)
+entry_maKh.place(x=130, y=10)
+entry_maKh.config(state='readonly')
 
-tk.Label(frame_info, text="Mã Khách Hàng", bg="#FFFACD", font=("Times New Roman", 12)).grid(row=0, column=0, sticky="w", pady=5)
-entry_ma = tk.Entry(frame_info, width=30)
-entry_ma.grid(row=0, column=1, padx=10, pady=5)
+tk.Label(frame_input, text="Tên Khách Hàng", bg="#FFFACD").place(x=200, y=10)
+entry_ten = tk.Entry(frame_input, width=30)
+entry_ten.place(x=320, y=10)
 
-tk.Label(frame_info, text="Giới Tính", bg="#FFFACD", font=("Times New Roman", 12)).grid(row=0, column=2, padx=10, sticky="w")
+tk.Label(frame_input, text="Giới Tính", bg="#FFFACD").place(x=10, y=50)
 gender = tk.StringVar(value="Nam")
-tk.Radiobutton(frame_info, text="Nam", variable=gender, value="Nam", bg="#FFFACD").grid(row=0, column=3, sticky="w")
-tk.Radiobutton(frame_info, text="Nữ", variable=gender, value="Nữ", bg="#FFFACD").grid(row=0, column=4, sticky="w")
+tk.Radiobutton(frame_input, text="Nam", variable=gender, value="Nam", bg="#FFFACD").place(x=70, y=48)
+tk.Radiobutton(frame_input, text="Nữ", variable=gender, value="Nữ", bg="#FFFACD").place(x=130, y=48)
 
-tk.Label(frame_info, text="Tên Khách Hàng", bg="#FFFACD", font=("Times New Roman", 12)).grid(row=1, column=0, sticky="w", pady=5)
-entry_ten = tk.Entry(frame_info, width=30)
-entry_ten.grid(row=1, column=1, padx=10, pady=5)
+tk.Label(frame_input, text="Ngày Sinh", bg="#FFFACD").place(x=200, y=50)
+date_ngaysinh = DateEntry(frame_input, width=12, background='darkblue', foreground='white', borderwidth=2, date_pattern='dd/mm/yyyy')
+date_ngaysinh.place(x=280, y=50)
 
-tk.Label(frame_info, text="Ngày Sinh", bg="#FFFACD", font=("Times New Roman", 12)).grid(row=1, column=2, padx=10, sticky="w")
-date_ngaysinh = DateEntry(frame_info, width=12, background='darkblue', foreground='white', borderwidth=2, date_pattern='d/m/yyyy')
-date_ngaysinh.grid(row=1, column=3, padx=10, pady=5, columnspan=2)
+tk.Label(frame_input, text="Số Điện Thoại", bg="#FFFACD").place(x=400, y=50)
+entry_sdt = tk.Entry(frame_input, width=30)
+entry_sdt.place(x=530, y=50)
 
-tk.Label(frame_info, text="Số Điện Thoại", bg="#FFFACD", font=("Times New Roman", 12)).grid(row=2, column=0, sticky="w", pady=5)
-entry_sdt = tk.Entry(frame_info, width=30)
-entry_sdt.grid(row=2, column=1, padx=10, pady=5)
+tk.Label(frame_input, text="Địa Chỉ", bg="#FFFACD").place(x=10, y=90)
+entry_diachi = tk.Entry(frame_input, width=70)
+entry_diachi.place(x=130, y=90)
 
-tk.Label(frame_info, text="Địa Chỉ", bg="#FFFACD", font=("Times New Roman", 12)).grid(row=2, column=2, sticky="w", padx=10)
-entry_diachi = tk.Entry(frame_info, width=30)
-entry_diachi.grid(row=2, column=3, padx=10, pady=5, columnspan=2)
+# Treeview + Scrollbar
+frame_tree = tk.LabelFrame(root, text="Danh sách khách hàng", font=("Times New Roman", 12), bg="#fff8dc", width=800, height=400)
+frame_tree.place(x=50, y=200)
 
-# ========== Khung Thông tin khách hàng ==========
-frame_info = tk.LabelFrame(root, text="Thông tin khách hàng", font=("Times New Roman", 12), bg="#fff8dc", width=750, height=350)
-frame_info.place(x=50, y=220)
+columns = ("maKh", "hoTen", "sdt", "phai", "ngsinh", "dchi")
+tree = ttk.Treeview(frame_tree, columns=columns, show="headings")
+tree.heading("maKh", text="Mã Khách Hàng")
+tree.heading("hoTen", text="Họ tên")
+tree.heading("sdt", text="Số điện thoại")
+tree.heading("phai", text="Giới Tính")
+tree.heading("ngsinh", text="Ngày Sinh")
+tree.heading("dchi", text="Địa Chỉ")
+tree.column("maKh", width = 100, anchor="center")
+tree.column("hoTen", width = 150)
+tree.column("sdt", width = 120, anchor="center")
+tree.column("phai", width = 80, anchor="center")
+tree.column("ngsinh", width = 100, anchor="center")
+tree.column("dchi", width = 250)
 
-# Bảng dữ liệu (Treeview)
-columns = ("ma_khach", "ten_khach_hang", "so_dien_thoai", "gioi_tinh", "ngay_sinh", "dia_chi")
-tree = ttk.Treeview(frame_info, columns=columns, show="headings", height=10)
-tree.heading("ma_khach", text="Mã Khách Hàng")
-tree.heading("ten_khach_hang", text="Tên Khách Hàng")
-tree.heading("so_dien_thoai", text="Số Điện Thoại")
-tree.heading("gioi_tinh", text="Giới Tính")
-tree.heading("ngay_sinh", text="Ngày Sinh")
-tree.heading("dia_chi", text="Địa Chỉ")
+'''for col, width in zip(columns, [100, 150, 120, 80, 100, 250]):
+    tree.heading(col, text=col, anchor= "center")
+    tree.column(col, width=width, anchor="center")'''
 
-tree.column("ma_khach", width=95)
-tree.column("ten_khach_hang", width=130)
-tree.column("so_dien_thoai", width=130)
-tree.column("gioi_tinh", width=60)
-tree.column("ngay_sinh", width=130)
-tree.column("dia_chi", width=250)
+scrollbar_v = ttk.Scrollbar(frame_tree, orient="vertical", command=tree.yview)
+scrollbar_h = ttk.Scrollbar(frame_tree, orient="horizontal", command=tree.xview)
+tree.configure(yscrollcommand=scrollbar_v.set, xscrollcommand=scrollbar_h.set)
+tree.place(x=10, y=10, width=760, height=340)
+scrollbar_v.place(x=770, y=10, width=20, height=360)
+scrollbar_h.place(x=10, y=350, width=750, height=20)
 
-tree.place(x=10, y=10, width=725, height=310)
+# Bind chọn dòng Treeview
+tree.bind("<<TreeviewSelect>>", hien_thi_chi_tiet)
 
-# ========== Các nút chức năng bên phải ==========
+# Nút chức năng
 button_style = {"font": ("Times New Roman", 13, "bold"), "bg": "#B0E0E6", "width": 8, "height": 1}
+tk.Button(root, text="Thêm", **button_style, command=them).place(x=870, y=120)
+tk.Button(root, text="Xóa", **button_style, command=xoa).place(x=870, y=200)
+tk.Button(root, text="Sửa", **button_style, command=sua).place(x=870, y=280)
+tk.Button(root, text="Hủy", **button_style, command=huy).place(x=870, y=360)
+tk.Button(root, text="Lưu", **button_style, command=luu).place(x=870, y=440)
+tk.Button(root, text="Thoát", **button_style, command=thoat).place(x=870, y=520)
 
-btn_them = tk.Button(root, text="Thêm", **button_style, command=them)
-btn_them.place(x=820, y=120)
-
-btn_xoa = tk.Button(root, text="Xóa", **button_style, command=xoa)
-btn_xoa.place(x=820, y=200)
-
-btn_sua = tk.Button(root, text="Sửa", **button_style, command=sua)
-btn_sua.place(x=820, y=280)
-
-btn_huy = tk.Button(root, text="Hủy", **button_style, command=huy)
-btn_huy.place(x=820, y=360)
-
-btn_luu = tk.Button(root, text="Lưu", **button_style, command=luu)
-btn_luu.place(x=820, y=440)
-
-btn_thoat = tk.Button(root, text="Thoát", **button_style, command=thoat)
-btn_thoat.place(x=820, y=520)
+# Load dữ liệu và thiết lập form lúc đầu
+load_data()
+lam_moi_form()
 
 root.mainloop()

@@ -48,8 +48,8 @@ tree.heading("maTuyen", text="Mã Tuyến")
 tree.heading("ddDi", text="Địa Điểm Đi")
 tree.heading("ddDen", text="Địa Điểm Đến")
 tree.column("maTuyen", width=150, anchor="center")
-tree.column("ddDi", width=300, anchor="center")
-tree.column("ddDen", width=300, anchor="center")
+tree.column("ddDi", width=150, anchor="center")
+tree.column("ddDen", width=400, anchor="center")
 
 scrollbar = ttk.Scrollbar(frame, orient="vertical", command=tree.yview)
 tree.configure(yscrollcommand=scrollbar.set)
@@ -196,19 +196,26 @@ def thoat():
     root.destroy()
 
 # ------------------ NÚT CHỨC NĂNG ------------------
-btn_them = tk.Button(root, text="Thêm", bg="#87cefa", font=("Arial", 12, "bold"), width=10, command=them_tuyen)
-btn_them.place(x=870, y=150)
-btn_sua = tk.Button(root, text="Sửa", bg="#87cefa", font=("Arial", 12, "bold"), width=10, command=sua_tuyen)
-btn_sua.place(x=870, y=210)
-btn_xoa = tk.Button(root, text="Xóa", bg="#87cefa", font=("Arial", 12, "bold"), width=10, command=xoa_tuyen)
-btn_xoa.place(x=870, y=270)
-btn_luu = tk.Button(root, text="Lưu", bg="#87cefa", font=("Arial", 12, "bold"), width=10, command=luu_tuyen)
-btn_luu.place(x=870, y=330)
-btn_huy = tk.Button(root, text="Hủy", bg="#87cefa", font=("Arial", 12, "bold"), width=10, command=huy)
-btn_huy.place(x=870, y=390)
-btn_thoat = tk.Button(root, text="Thoát", bg="#87cefa", font=("Arial", 12, "bold"), width=10, command=thoat)
-btn_thoat.place(x=870, y=450)
+# ========== Các nút chức năng bên phải ==========
+button_style = {"font": ("Times New Roman", 13, "bold"), "bg": "#B0E0E6", "width": 8, "height": 1}
 
+btn_them = tk.Button(root, text="Thêm", **button_style, command=them_tuyen)
+btn_them.place(x=870, y=120)
+
+btn_xoa = tk.Button(root, text="Xóa", **button_style, command=xoa_tuyen)
+btn_xoa.place(x=870, y=200)
+
+btn_sua = tk.Button(root, text="Sửa", **button_style, command=sua_tuyen)
+btn_sua.place(x=870, y=280)
+
+btn_huy = tk.Button(root, text="Hủy", **button_style, command=huy)
+btn_huy.place(x=870, y=360)
+
+btn_luu = tk.Button(root, text="Lưu", **button_style, command=luu_tuyen)
+btn_luu.place(x=870, y=440)
+
+btn_thoat = tk.Button(root, text="Thoát", **button_style, command=thoat)
+btn_thoat.place(x = 870, y=520)
 # ------------------ KHỞI TẠO FORM ------------------
 lam_moi_form()
 load_data()

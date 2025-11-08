@@ -173,11 +173,12 @@ def xoa_tuyen():
     if confirm:
         for item in selected:
             ma = tree.item(item, "values")[0]  # lấy mã tuyến
-            # Xóa trong CSDL
-            cursor.execute("DELETE FROM TUYENDULICH WHERE maTuyen=?", (ma,))
-            conn.commit()
-            # Xóa trong Treeview
             tree.delete(item)
+            # Xóa trong CSDL
+         #  cursor.execute("DELETE FROM TUYENDULICH WHERE maTuyen=?", (ma,))
+           # conn.commit()
+          
+            
 
 
 def luu_tuyen():

@@ -67,11 +67,38 @@ def lam_moi_form():
     entry_dchi.delete(0, tk.END)
     combo_chucvu.set("Chọn chức vụ")
 
+
+
 def toggle_luong_visibility(show=True):
     if show:
         tree["displaycolumns"] = ("maNV","hoTen","sdt","phai","ngsinh","dchi","chucVu","soChuyen","luong")
     else:
         tree["displaycolumns"] = ("maNV","hoTen","sdt","phai","ngsinh","dchi","chucVu","soChuyen")
+
+# ------------------ TREEVIEW ------------------
+tree_frame = tk.LabelFrame(root, text="Danh sách nhân viên", font=("Times New Roman",12), bg="#fff8dc", width=900, height=400)
+tree_frame.place(x=50, y=280)
+
+columns = ("maNV","hoTen","sdt","phai","ngsinh","dchi","chucVu","soChuyen","luong")
+tree = ttk.Treeview(tree_frame, columns=columns, show="headings", height=15)
+
+for col, text, width in zip(columns,
+    ["Mã NV","Họ Tên","SĐT","Phái","Ngày Sinh","Địa Chỉ","Chức Vụ","Số chuyến","Lương"],
+    [100,150,100,60,100,200,120,100,100]):
+    tree.heading(col, text=text)
+    tree.column(col, width=width, anchor="center" if col in ["maNV","sdt","phai","ngsinh","chucVu","soChuyen","luong"] else "w")
+
+scrollbar_v = ttk.Scrollbar(tree_frame, orient="vertical", command=tree.yview)
+scrollbar_h = ttk.Scrollbar(tree_frame, orient="horizontal", command=tree.xview)
+tree.configure(yscrollcommand=scrollbar_v.set, xscrollcommand=scrollbar_h.set)
+tree.grid(row=0, column=0, sticky="nsew", padx=(5,0), pady=(5,0))
+scrollbar_v.grid(row=0, column=1, sticky="ns", pady=(5,0))
+scrollbar_h.grid(row=1, column=0, sticky="ew", padx=(5,0))
+tree_frame.grid_rowconfigure(0, weight=1)
+tree_frame.grid_columnconfigure(0, weight=1)
+
+toggle_luong_visibility(False)
+#tree.bind("<<TreeviewSelect>>", hien_thi_chi_tiet)
 
 # ------------------ XEM LƯƠNG ------------------
 def xem_luong():
@@ -163,8 +190,8 @@ def luu():
         return
 
     # 👉 Xóa toàn bộ dữ liệu cũ trong bảng NHANVIEN
-    cursor.execute("DELETE FROM NHANVIEN")
-    conn.commit()
+    '''cursor.execute("DELETE FROM NHANVIEN")
+    conn.commit()'''
 
     # 👉 Duyệt tất cả các dòng trong Treeview và lưu lại
     for item in tree.get_children():
@@ -283,28 +310,6 @@ btn_luu = tk.Button(root, text="Lưu", bg="#87cefa", font=("Arial",12,"bold"), w
 btn_luu.place(x=660, y=235)
 btn_thoat = tk.Button(root, text="Thoát", bg="#87cefa", font=("Arial",12,"bold"), width=10, command=thoat)
 btn_thoat.place(x=800, y=235)
-
-# ------------------ TREEVIEW ------------------
-tree_frame = tk.LabelFrame(root, text="Danh sách nhân viên", font=("Times New Roman",12), bg="#fff8dc", width=900, height=400)
-tree_frame.place(x=50, y=280)
-
-columns = ("maNV","hoTen","sdt","phai","ngsinh","dchi","chucVu","soChuyen","luong")
-tree = ttk.Treeview(tree_frame, columns=columns, show="headings", height=15)
-
-for col, text, width in zip(columns,
-    ["Mã NV","Họ Tên","SĐT","Phái","Ngày Sinh","Địa Chỉ","Chức Vụ","Số chuyến","Lương"],
-    [100,150,100,60,100,200,120,100,100]):
-    tree.heading(col, text=text)
-    tree.column(col, width=width, anchor="center" if col in ["maNV","sdt","phai","ngsinh","chucVu","soChuyen","luong"] else "w")
-
-scrollbar_v = ttk.Scrollbar(tree_frame, orient="vertical", command=tree.yview)
-scrollbar_h = ttk.Scrollbar(tree_frame, orient="horizontal", command=tree.xview)
-tree.configure(yscrollcommand=scrollbar_v.set, xscrollcommand=scrollbar_h.set)
-tree.grid(row=0, column=0, sticky="nsew", padx=(5,0), pady=(5,0))
-scrollbar_v.grid(row=0, column=1, sticky="ns", pady=(5,0))
-scrollbar_h.grid(row=1, column=0, sticky="ew", padx=(5,0))
-tree_frame.grid_rowconfigure(0, weight=1)
-tree_frame.grid_columnconfigure(0, weight=1)
 
 toggle_luong_visibility(False)
 tree.bind("<<TreeviewSelect>>", hien_thi_chi_tiet)

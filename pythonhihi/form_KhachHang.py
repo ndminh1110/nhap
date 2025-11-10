@@ -68,15 +68,7 @@ def them():
     messagebox.showinfo("Thành công", f"Đã thêm khách hàng {hoTen} với mã {maKh}")
     lam_moi_form()
 
-def xoa():
-    selected = tree.selection()
-    if not selected:
-        messagebox.showwarning("Chưa chọn", "Vui lòng chọn khách hàng để xóa!")
-        return
-    confirm = messagebox.askyesno("Xác nhận", "Bạn có chắc muốn xóa?")
-    if confirm:
-        tree.delete(selected[0])
-        lam_moi_form()
+
 
 def sua():
     selected = tree.selection()
@@ -131,13 +123,32 @@ def hien_thi_chi_tiet(event):
 def huy():
     lam_moi_form()
 
+deleted_items = []
+
+def xoa():
+    global deleted_items
+    selected = tree.selection()
+    if not selected:
+        messagebox.showwarning("Chưa chọn", "Vui lòng chọn khách hàng để xóa!")
+        return
+    confirm = messagebox.askyesno("Xác nhận", "Bạn có chắc muốn xóa?")
+    if confirm:
+        for item in selected:
+            maKh = tree.item(item)['values'][0]
+            deleted_items.append(maKh)  # Lưu lại mã đã xóa
+            tree.delete(item)
+        lam_moi_form()
+
 def luu():
+    global deleted_items
+    # Xóa dữ liệu đã xóa trong CSDL
+    for maKh in deleted_items:
+        cursor.execute("DELETE FROM KHACHHANG WHERE maKh=?", (maKh,))
+    deleted_items.clear()  # reset danh sách
+
+    # Lưu các bản ghi còn lại trong Treeview
     for item in tree.get_children():
         maKh, hoTen, sdt, phai_val, ngsinh, dchi = tree.item(item, "values")
-        # Kiểm tra số điện thoại hợp lệ trước khi lưu
-        if not (sdt.isdigit() and len(sdt) == 10 and sdt.startswith("0")):
-            messagebox.showwarning("Bỏ qua", f"SĐT {sdt} của {hoTen} không hợp lệ, không lưu vào CSDL!")
-            continue
         cursor.execute("SELECT 1 FROM KHACHHANG WHERE maKh=?", (maKh,))
         if not cursor.fetchone():
             cursor.execute(
@@ -148,6 +159,9 @@ def luu():
     messagebox.showinfo("Thành công", "Đã lưu dữ liệu vào CSDL!")
     load_data()
     lam_moi_form()
+
+
+
 
 def thoat():
     root.quit()

@@ -15,9 +15,18 @@ cursor = conn.cursor()
 
 # ------------------ HÀM TẠO MÃ TỰ ĐỘNG ------------------
 def tao_ma_chuyen_di():
-    cursor.execute("SELECT COUNT(*) FROM CHUYENDI")
-    count = cursor.fetchone()[0] + 1
-    return f"CD{count:04d}"
+    cursor.execute("SELECT maCD FROM CHUYENDI")
+    ma_list = [row[0] for row in cursor.fetchall()]
+    if not ma_list:
+        return "CD0001"
+    so_list = sorted([int(ma[2:]) for ma in ma_list if ma[2:].isdigit()])
+    next_num = 1
+    for num in so_list:
+        if num == next_num:
+            next_num += 1
+        elif num > next_num:
+            break
+    return f"CD{next_num:04d}"
 
 def lay_ds_ma_tuyen():
     cursor.execute("SELECT maTuyen FROM TUYENDULICH")
@@ -55,7 +64,7 @@ cb_ma_nv = ttk.Combobox(root, width=20, state="readonly", values=lay_ds_ma_nv())
 cb_ma_nv.place(x=300, y=150)
 cb_ma_nv.set("Chọn nhân viên")
 
-tk.Label(root, text="Ngày Khởi Hành", font=("Arial", 12), bg="#fff8dc").place(x=120, y=200)
+tk.Label(root, text="Ngày Khởi Hành", font=("Ariqal", 12), bg="#fff8dc").place(x=120, y=200)
 date_ngKh = DateEntry(root, width=20, background='darkblue', foreground='white', borderwidth=2, date_pattern='dd/mm/yyyy')
 date_ngKh.place(x=300, y=200)
 date_ngKh.set_date(date.today())
@@ -64,28 +73,30 @@ tk.Label(root, text="Thời Gian Khởi Hành", font=("Arial", 12), bg="#fff8dc"
 txt_tgkh = tk.Entry(root, width=25)
 txt_tgkh.place(x=700, y=150)
 
-tk.Label(root, text="Số Lượng Hành Khách", font=("Arial", 12), bg="#fff8dc").place(x=120, y=250)
-txt_sl = tk.Entry(root, width=25)
-txt_sl.place(x=300, y=250)
-
-tk.Label(root, text="Giá Vé (VNĐ)", font=("Arial", 12), bg="#fff8dc").place(x=550, y=200)
-txt_gia = tk.Entry(root, width=25)
-txt_gia.place(x=700, y=200)
 
 # ------------------ KHUNG BẢNG HIỂN THỊ ------------------
 frame_info = tk.LabelFrame(root, text="Danh Sách Chuyến Đi", font=("Arial", 12, "bold"), bg="#fff8dc", width=900, height=300)
 frame_info.place(x=50, y=320)
 
-columns = ("maCD", "maTuyen", "maNV", "ngKh", "tgKh", "soLuong", "giaVe")
+columns = ("maCD", "maTuyen", "maNV", "ngKh", "tgKh")
 tree = ttk.Treeview(frame_info, columns=columns, show="headings", height=10)
 
-for col, text in zip(columns, ["Mã CD", "Mã Tuyến", "Mã NV", "Ngày Khởi Hành", "Giờ Khởi Hành", "Số Lượng", "Giá Vé"]):
+for col, text in zip(columns, ["Mã CD", "Mã Tuyến", "Mã NV", "Ngày Khởi Hành", "Giờ Khởi Hành"]):
     tree.heading(col, text=text)
     tree.column(col, width=120, anchor="center")
 
 tree.pack(fill="both", expand=True, padx=10, pady=10)
 
 # ------------------ HÀM CHỨC NĂNG ------------------
+def load_data():
+    """Load dữ liệu từ CSDL lên Treeview"""
+    for i in tree.get_children():
+        tree.delete(i)
+    cursor.execute("SELECT maCD, maNV,maTuyen, tgKH, ngKH FROM CHUYENDI")
+    rows = cursor.fetchall()
+    for row in rows:
+        tree.insert("", "end", values=(row[0].strip(), row[1].strip(), row[2].strip(), row[3].strip(), row[4].strip()))
+
 def lam_moi_form():
     txt_ma_cd.config(state="normal")
     txt_ma_cd.delete(0, tk.END)
@@ -95,8 +106,6 @@ def lam_moi_form():
     cb_ma_nv.set("Chọn nhân viên")
     date_ngKh.set_date(date.today())
     txt_tgkh.delete(0, tk.END)
-    txt_sl.delete(0, tk.END)
-    txt_gia.delete(0, tk.END)
 
 def them_chuyen_di():
     maCD = txt_ma_cd.get()
@@ -104,14 +113,11 @@ def them_chuyen_di():
     maNV = cb_ma_nv.get()
     ngKh_value = date_ngKh.get_date()
     tgKh_value = txt_tgkh.get()
-    soLuong_value = txt_sl.get() or 0
-    giaVe_value = txt_gia.get() or 0
 
     if maTuyen == "Chọn mã tuyến" or maNV == "Chọn nhân viên" or not tgKh_value:
         messagebox.showwarning("Thiếu thông tin", "Vui lòng nhập đủ dữ liệu")
         return
-
-    tree.insert("", "end", values=(maCD, maTuyen, maNV, ngKh_value, tgKh_value, soLuong_value, giaVe_value))
+    tree.insert("", "end", values=(maCD, maTuyen, maNV, ngKh_value, tgKh_value))
     lam_moi_form()
 
 def xoa_chuyen_di():
@@ -121,28 +127,40 @@ def xoa_chuyen_di():
         return
     for item in selected:
         tree.delete(item)
+def hien_thi_chi_tiet():
+    selected = tree.selection()
+    if selected:
+        maCD, maTuyen, maNV, tgKH, ngKH = tree.item(selected[0], "values")
+        txt_ma_cd.config(state='normal')
+        txt_ma_cd.delete(0, tk.END)
+        txt_ma_cd.insert(0, maCD)
+        txt_ma_cd.config(state='readonly')
+
+        cb_ma_tuyen.delete(0, tk.END)
+        cb_ma_tuyen.insert(0, maTuyen)
+
+        cb_ma_nv.delete(0, tk.END)
+        cb_ma_nv.insert(0, maNV)
+
+        date_ngKh.delete(0, tk.END)
+        date_ngKh.set_date(ngKH)
+
+        txt_tgkh.delete(0, tk.END)
+        txt_tgkh.insert(0, tgKH)
 
 def luu_chuyen_di():
     for item in tree.get_children():
-        maCD, maTuyen, maNV, ngKh_value, tgKh_value, soLuong_value, giaVe_value = tree.item(item, "values")
-        soLuong_value = int(soLuong_value or 0)
-        giaVe_value = float(giaVe_value or 0)
-        
-        # Thêm chuyến đi nếu chưa có
-        cursor.execute("""
-            IF NOT EXISTS (SELECT 1 FROM CHUYENDI WHERE maCD=?)
-            INSERT INTO CHUYENDI (maCD, ngKh, tgKh, maNV, maTuyen, giaVe)
-            VALUES (?, ?, ?, ?, ?, ?)
-        """, (maCD, maCD, ngKh_value, tgKh_value, maNV, maTuyen, giaVe_value))
-        
-        # Cập nhật doanh thu ban đầu nếu chưa có
-        cursor.execute("""
-            IF NOT EXISTS (SELECT 1 FROM DOANHTHU WHERE maCD=?)
-            INSERT INTO DOANHTHU (maCD, giaVe, soLuong, tongTien)
-            VALUES (?, ?, ?, ?)
-        """, (maCD, maCD, giaVe_value, soLuong_value, giaVe_value*soLuong_value))
+        maCD, maTuyen, maNV, ngKh_value, tgKh_value = tree.item(item, "values")
+        cursor.execute("SELECT 1 FROM CHUYENDI WHERE maCD=?", (maCD,))
+        if not cursor.fetchone():
+            cursor.execute(
+                " INSERT INTO CHUYENDI (maCD, maTuyen, maNV, ngKh, tgKh) VALUES (?, ?, ?, ?, ?)",
+                (maCD, maTuyen, maNV, ngKh_value, tgKh_value)
+            )
     conn.commit()
-    messagebox.showinfo("Thành công", "Đã lưu tất cả chuyến đi vào CSDL")
+    messagebox.showinfo("Thành công", "Đã lưu dữ liệu vào CSDL!")
+    load_data()
+    lam_moi_form()
 
 def sua_chuyen_di():
     selected = tree.selection()
@@ -160,10 +178,7 @@ def sua_chuyen_di():
     date_ngKh.set_date(ngKh_value)
     txt_tgkh.delete(0, tk.END)
     txt_tgkh.insert(0, tgKh_value)
-    txt_sl.delete(0, tk.END)
-    txt_sl.insert(0, soLuong_value)
-    txt_gia.delete(0, tk.END)
-    txt_gia.insert(0, giaVe_value)
+
 
 def huy():
     lam_moi_form()
@@ -187,5 +202,7 @@ btn_luu.place(x=660, y=280)
 btn_thoat = tk.Button(root, text="Thoát", bg="#87cefa", font=("Arial", 12, "bold"), width=10, command=root.quit)
 btn_thoat.place(x=800, y=280)
 
-
+load_data()
+lam_moi_form()
+hien_thi_chi_tiet()
 root.mainloop()

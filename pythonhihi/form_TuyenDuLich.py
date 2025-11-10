@@ -57,13 +57,31 @@ tree.pack(side="left", fill="both", expand=True, padx=10, pady=10)
 scrollbar.pack(side="right", fill="y")
 
 # ------------------ HÀM SINH MÃ TUYẾN ------------------
+
 def tao_ma_tuyen_moi():
-    cursor.execute("SELECT MAX(maTuyen) FROM TUYENDULICH")
-    max_ma = cursor.fetchone()[0]
-    tree_list = [int(tree.item(item, "values")[0][2:]) for item in tree.get_children()]
-    max_tree = max(tree_list) if tree_list else 0
-    max_val = max(int(max_ma[2:]) if max_ma else 0, max_tree)
-    return f"TD{max_val + 1:04d}"
+    """Tự động sinh mã tuyến mới dựa vào cả Treeview và CSDL, lấp khoảng trống."""
+    # --- Lấy mã từ Treeview ---
+    ma_tree = [tree.item(item)['values'][0].strip() for item in tree.get_children() if tree.item(item)['values']]
+    so_tree = [int(ma[2:]) for ma in ma_tree if ma.startswith("TD") and ma[2:].isdigit()]
+
+    # --- Lấy mã từ CSDL ---
+    cursor.execute("SELECT maTuyen FROM TUYENDULICH")
+    ma_sql = [row[0].strip() for row in cursor.fetchall() if row[0]]
+    so_sql = [int(ma[2:]) for ma in ma_sql if ma.startswith("TD") and ma[2:].isdigit()]
+
+    # --- Gộp tất cả và sắp xếp ---
+    so_all = sorted(set(so_tree + so_sql))
+
+    # --- Tìm khoảng trống đầu tiên ---
+    next_num = 1
+    for num in so_all:
+        if num == next_num:
+            next_num += 1
+        elif num > next_num:
+            break
+
+    return f"TD{next_num:04d}"
+
 
 # ------------------ Entry & Combobox ------------------
 tk.Label(root, text="Mã Tuyến:", font=("Arial", 12), bg="#FFFACD").place(x=200, y=130)
@@ -174,22 +192,58 @@ def xoa_tuyen():
         for item in selected:
             ma = tree.item(item, "values")[0]  # lấy mã tuyến
             tree.delete(item)
+            lam_moi_form()
             # Xóa trong CSDL
          #  cursor.execute("DELETE FROM TUYENDULICH WHERE maTuyen=?", (ma,))
            # conn.commit()
-          
-            
-
-
 def luu_tuyen():
-    for item in tree.get_children():
-        ma, di, den = tree.item(item, "values")
-        cursor.execute("IF NOT EXISTS (SELECT 1 FROM TUYENDULICH WHERE maTuyen=?) "
-                       "INSERT INTO TUYENDULICH (maTuyen, ddDi, ddDen) VALUES (?, ?, ?)",
-                       (ma, ma, di, den))
-    conn.commit()
-    messagebox.showinfo("Thành công", "Đã lưu tất cả tuyến vào CSDL")
-    load_data()  # Cập nhật lại Treeview từ CSDL
+    try:
+        # 1️⃣ Lấy dữ liệu hiện có trong SQL
+        cursor.execute("SELECT maTuyen, ddDi, ddDen FROM TUYENDULICH")
+        data_sql = cursor.fetchall()
+        dict_sql = {row[0]: (row[1], row[2]) for row in data_sql}  # {maTuyen: (ddDi, ddDen)}
+
+        # 2️⃣ Lấy dữ liệu hiện có trên Treeview
+        data_tree = {}
+        for item in tree.get_children():
+            values = tree.item(item, "values")
+            if len(values) < 3:
+                continue  # ⚠️ Bỏ qua dòng lỗi thiếu dữ liệu
+            ma, di, den = values
+            if ma and di and den and di != "Chọn địa điểm đi" and den != "Chọn địa điểm đến":
+                data_tree[ma] = (di.strip(), den.strip())
+
+        # 3️⃣ Xử lý thêm hoặc cập nhật
+        for ma, (di, den) in data_tree.items():
+            if ma not in dict_sql:
+                # ✅ Tuyến mới → thêm vào SQL
+                cursor.execute("""
+                    INSERT INTO TUYENDULICH (maTuyen, ddDi, ddDen)
+                    VALUES (?, ?, ?)
+                """, (ma, di, den))
+            else:
+                # ✅ Nếu có thay đổi → cập nhật
+                di_sql, den_sql = dict_sql[ma]
+                if di != di_sql or den != den_sql:
+                    cursor.execute("""
+                        UPDATE TUYENDULICH
+                        SET ddDi = ?, ddDen = ?
+                        WHERE maTuyen = ?
+                    """, (di, den, ma))
+
+        # 4️⃣ Xử lý xóa (những tuyến không còn trong Treeview)
+        for ma in list(dict_sql.keys()):
+            if ma not in data_tree:
+                cursor.execute("DELETE FROM TUYENDULICH WHERE maTuyen = ?", (ma,))
+
+        # 5️⃣ Lưu thay đổi
+        conn.commit()
+        messagebox.showinfo("Thành công", "Đã lưu và đồng bộ dữ liệu với CSDL!")
+        load_data()
+
+    except Exception as e:
+        messagebox.showerror("Lỗi", f"Lưu dữ liệu thất bại!\n{e}")
+
 def huy():
     lam_moi_form()
 

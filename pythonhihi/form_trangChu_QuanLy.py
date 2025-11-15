@@ -1,30 +1,33 @@
 import tkinter as tk
+from tkinter import messagebox
+import pyodbc
 import subprocess
-
+import sys,os
+conn = pyodbc.connect(
+            'DRIVER={SQL Server};'
+           # 'SERVER=ADMIN-PC;'
+            'SERVER=localhost\\SQLEXPRESS01;'
+            'DATABASE=QuanLyTuyenDuLich;'
+            'Trusted_Connection=yes;'    # Nếu bạn dùng Windows Authentication
+        )
+cursor = conn.cursor()
 def open_form_KhachHang():
-    #root.destroy()  # Đóng form 1
     subprocess.Popen(["python", "form_KhachHang.py"])  # Mở form 2
 
 def open_form_NhanVien():
-    #root.destroy()  # Đóng form 1
     subprocess.Popen(["python", "form_NhanVien.py"])  # Mở form 2
 
 def open_form_ChuyenDi():
-    #root.destroy()  # Đóng form 1
     subprocess.Popen(["python", "form_ChuyenDi.py"])  # Mở form 2
 
 def open_form_TuyenDuLich():
-    #root.destroy()  # Đóng form 1
     subprocess.Popen(["python", "form_TuyenDuLich.py"])  # Mở form 2
 
-def open_form_DatVe():  
-    #root.destroy()  # Đóng form 1
+def open_form_DatVe(): 
     subprocess.Popen(["python", "form_DatVe.py"])  # Mở form 2
 
 def open_form_DoanhThu():
-    #root.destroy()  # Đóng form 1
     subprocess.Popen(["python", "form_DoanhThu.py"])  # Mở form 2
-
 
 def thoat():
     root.destroy()

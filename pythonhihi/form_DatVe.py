@@ -91,23 +91,20 @@ def xoa():
 def sua():
     selected = tree.selection()
     if not selected:
-        messagebox.showwarning("Chưa chọn", "Vui lòng chọn vé để sửa!")
+        messagebox.showwarning("Chưa chọn", "Vui lòng chọn nhân viên để sửa!")
         return
-
-    maVe = tree.item(selected[0])['values'][0].strip()
+    
+    maVe = entry_maVe.get().strip()
     maKH = entry_maKH.get().strip()
     maCD = entry_maCD.get().strip()
-    ngDat = date_ngDat.get().strip().strftime('%d/%m/%Y')
+    ngDat = date_ngDat.get_date().strftime('%Y-%m-%d')
     trangThai = entry_trangThai.get().strip()
     giaVe = float(entry_giaVe.get().strip())
     soluong = int(spin_soLuong.get().strip())
-
-    if not trangThai or not giaVe or not soluong:
-        messagebox.showwarning("Thiếu dữ liệu", "Vui lòng nhập đầy đủ thông tin!")
-        return
-    tree.item(selected[0], values=(maVe, maKH, maCD, ngDat, trangThai, giaVe, soluong))
-    messagebox.showinfo("Thành công", "Đã cập nhật thông tin khách hàng!")
+    thanhTien = giaVe * soluong
+    tree.item(selected[0], values=(maVe, maKH, maCD, ngDat, trangThai, giaVe, soluong, thanhTien))
     lam_moi_form()
+
 
 def huy():
     lam_moi_form()
@@ -172,10 +169,10 @@ title_label = tk.Label(root, text="Quản Lý Đặt Vé", font=("Arial", 20, "b
 title_label.place(x=400, y=45)
 
 # ========== Thông tin khách hàng ==========
-frame_info = tk.Frame(root, bg="#FFFACD")
+frame_info = tk.Frame(root, bg="#fff8dc")
 frame_info.place(x=100, y=100)
 
-tk.Label(frame_info, text="Mã Vé", bg="#FFFACD", font=("Times New Roman", 12)).grid(row=0, column=0, sticky="w", pady=5)
+tk.Label(frame_info, text="Mã Vé", bg="#fff8dc", font=("Times New Roman", 12)).grid(row=0, column=0, sticky="w", pady=5)
 entry_maVe = tk.Entry(frame_info, width=30)
 entry_maVe.grid(row=0, column=1, padx=10, pady=5)
 entry_maVe.config(state='readonly')
@@ -184,26 +181,26 @@ tk.Label(frame_info, text="Số Lượng", font=("Times New Roman", 12), bg="#ff
 spin_soLuong = tk.Spinbox(frame_info, from_=1, to=100, width=10)
 spin_soLuong.grid(row=0, column=3, padx=10, pady=5, columnspan=2)
 
-tk.Label(frame_info, text="Mã Chuyến Đi", bg="#FFFACD", font=("Times New Roman", 12)).grid(row=2, column=0, sticky="w", pady=5)
+tk.Label(frame_info, text="Mã Chuyến Đi", bg="#fff8dc", font=("Times New Roman", 12)).grid(row=2, column=0, sticky="w", pady=5)
 entry_maCD = ttk.Combobox(frame_info, width=30, values=lay_danh_sach_ma_chuyen_di(),state="readonly")
 entry_maCD.grid(row=2, column=1, padx=10, pady=5)
 entry_maCD.set("")
 
-tk.Label(frame_info, text="Giá Vé", bg="#FFFACD", font=("Times New Roman", 12)).grid(row=1, column=2, sticky="w", padx=10)
+tk.Label(frame_info, text="Giá Vé", bg="#fff8dc", font=("Times New Roman", 12)).grid(row=1, column=2, sticky="w", padx=10)
 entry_giaVe = tk.Entry(frame_info, width=30)
 entry_giaVe.grid(row=1, column=3, padx=10, pady=5, columnspan=2)
 
-tk.Label(frame_info, text="Mã Khách Hàng", bg="#FFFACD", font=("Times New Roman", 12)).grid(row=1, column=0, sticky="w", pady=5)
+tk.Label(frame_info, text="Mã Khách Hàng", bg="#fff8dc", font=("Times New Roman", 12)).grid(row=1, column=0, sticky="w", pady=5)
 entry_maKH = ttk.Combobox(frame_info, width=30, state='readonly', values=lay_danh_sach_ma_khach_hang())
 entry_maKH.grid(row=1, column=1, padx=10, pady=5)
 entry_maKH.set("")
 
-tk.Label(frame_info, text="Trạng Thái", bg="#FFFACD", font=("Times New Roman", 12)).grid(row=2, column=2, sticky="w", padx=10)
+tk.Label(frame_info, text="Trạng Thái", bg="#fff8dc", font=("Times New Roman", 12)).grid(row=2, column=2, sticky="w", padx=10)
 entry_trangThai = ttk.Combobox(frame_info, width=30, values=["đã thanh toán","chưa thanh toán"], state='readonly')
 entry_trangThai.grid(row=2, column=3, padx=10, pady=5, columnspan=2)
 entry_trangThai.set("")
 
-tk.Label(frame_info, text="Ngày Đặt", bg="#FFFACD", font=("Times New Roman", 12)).grid(row=3, column=0, sticky="w", padx=5)
+tk.Label(frame_info, text="Ngày Đặt", bg="#fff8dc", font=("Times New Roman", 12)).grid(row=3, column=0, sticky="w", padx=5)
 date_ngDat = DateEntry(frame_info, width=12, background='darkblue', foreground='white', borderwidth=2, date_pattern='d/m/yyyy')
 date_ngDat.grid(row=3, column=1, padx=10, pady=5)
 
@@ -211,30 +208,30 @@ date_ngDat.grid(row=3, column=1, padx=10, pady=5)
 button_style = {"font": ("Times New Roman", 13, "bold"), "bg": "#B0E0E6", "width": 8, "height": 1}
 
 btn_them = tk.Button(root, text="Thêm", **button_style, command=them)
-btn_them.place(x=820, y=120)
+btn_them.place(x=880, y=130)
 
 btn_xoa = tk.Button(root, text="Xóa", **button_style, command=xoa)
-btn_xoa.place(x=820, y=200)
+btn_xoa.place(x=880, y=210)
 
-btn_sua = tk.Button(root, text="Sửa", **button_style) #command=sua)
-btn_sua.place(x=820, y=280)
+btn_sua = tk.Button(root, text="Sửa", **button_style, command=sua)
+btn_sua.place(x=880, y=290)
 
 btn_huy = tk.Button(root, text="Hủy", **button_style, command=huy)
-btn_huy.place(x=820, y=360)
+btn_huy.place(x=880, y=370)
 
 btn_luu = tk.Button(root, text="Lưu", **button_style, command=luu)
-btn_luu.place(x=820, y=440)
+btn_luu.place(x=880, y=450)
 
 btn_thoat = tk.Button(root, text="Thoát", **button_style, command=thoat)
-btn_thoat.place(x=820, y=520)
+btn_thoat.place(x=880, y=530)
 
 # === KHUNG THÔNG TIN ĐẶT VÉ ===
-frame_info = tk.LabelFrame(root, text="Thông Tin Đặt Vé", font=("Arial", 12, "bold"), bg="#fff8dc", width=750, height=320)
-frame_info.place(x=50, y=250)
+frame_tree = tk.LabelFrame(root, text="Thông Tin Đặt Vé", font=("Arial", 12, "bold"), bg="#fff8dc", width=790, height=400)
+frame_tree.place(x=50, y=250)
 
 # Bảng dữ liệu (Treeview)
 columns = ("maVe", "maCD", "maKH", "ngDat", "soLuong", "giaVe", "trangThai", "thanhTien")
-tree = ttk.Treeview(frame_info, columns=columns, show="headings", height=10)
+tree = ttk.Treeview(frame_tree, columns=columns, show="headings", height=10)
 tree.heading("maVe", text="Mã Vé")
 tree.heading("maCD", text="Mã Chuyến Đi")
 tree.heading("maKH", text="Mã Khách Hàng")
@@ -253,12 +250,13 @@ tree.column("giaVe", width=90, anchor="center")
 tree.column("trangThai", width=100, anchor="center")
 tree.column("thanhTien", width=120, anchor="center")
 
-scrollbar_v = ttk.Scrollbar(frame_info, orient="vertical", command=tree.yview)
-scrollbar_h = ttk.Scrollbar(frame_info, orient="horizontal", command=tree.xview)
+
+scrollbar_v = ttk.Scrollbar(frame_tree, orient="vertical", command=tree.yview)
+scrollbar_h = ttk.Scrollbar(frame_tree, orient="horizontal", command=tree.xview)
 tree.configure(yscrollcommand=scrollbar_v.set, xscrollcommand=scrollbar_h.set)
-tree.place(x=10, y=10, width=720, height=300)
-scrollbar_v.place(x=770, y=10, width=20, height=360)
-scrollbar_h.place(x=10, y=350, width=750, height=20)
+tree.place(x=10, y=10, width=750, height=340)
+scrollbar_v.place(x=765, y=10, width=15, height=350)
+scrollbar_h.place(x=10, y=355, width=755, height=15)
 
 # === CHẠY FORM ===
 lam_moi_form()

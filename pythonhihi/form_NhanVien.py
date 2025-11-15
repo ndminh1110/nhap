@@ -1,12 +1,13 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
 from tkcalendar import DateEntry
-from datetime import date
+from datetime import date, datetime
 import pyodbc
+import re
 
 # ------------------ KẾT NỐI SQL SERVER ------------------
 conn = pyodbc.connect(
-    'DRIVER={ODBC Driver 17 for SQL Server};'
+    'DRIVER={SQL Server};'
     'SERVER=localhost\\SQLEXPRESS01;'
     'DATABASE=QuanLyTuyenDuLich;'
     'Trusted_Connection=yes;'
@@ -19,33 +20,29 @@ root.geometry("1000x650")
 root.configure(bg="#FFFACD")
 
 # ------------------ HÀM ------------------
+deleted_items = []
+reusable_ids = []
+
 def auto_maNV():
-    """Tạo mã nhân viên mới tự động dạng NV0001, NV0002,..."""
-    cursor.execute("SELECT MAX(maNV) FROM NHANVIEN")
-    max_manv = cursor.fetchone()[0]
-
-    tree_list = []
-    for item in tree.get_children():
-        val = tree.item(item, "values")[0]  # maNV
-        if val.startswith("NV"):
-            tree_list.append(int(val[2:]))
-    max_tree = max(tree_list) if tree_list else 0
-
-    max_val = max(int(max_manv[2:]) if max_manv else 0, max_tree)
-    return f"NV{max_val + 1:04d}"
-
-def load_data():
-    """Load dữ liệu từ CSDL lên Treeview"""
-    for i in tree.get_children():
-        tree.delete(i)
-    cursor.execute("SELECT maNV, hoTen, sdt, phai, ngsinh, dchi, chucVu FROM NHANVIEN")
-    rows = cursor.fetchall()
-    for row in rows:
-        tree.insert("", "end", values=(row[0], row[1], row[2], row[3], row[4], row[5], row[6], 0, 0))
+    ma_list_tree = [tree.item(item)['values'][0].strip() for item in tree.get_children()]
+    
+    # Lấy mã từ CSDL (kể cả đã xóa)
+    cursor.execute("SELECT maNV FROM NHANVIEN")
+    ma_list_sql = [row[0].strip() for row in cursor.fetchall()]
+    
+    # Gộp danh sách
+    ma_list = list(set(ma_list_tree + ma_list_sql))
+    
+    if not ma_list:
+        return "NV0001"
+    
+    so_list = sorted([int(ma[2:]) for ma in ma_list if ma[2:].isdigit()])
+    next_num = so_list[-1] + 1  # mã mới hoàn toàn (tăng lên 1)
+    return f"NV{next_num:04d}"
 
 def load_nam():
-    """Lấy danh sách năm từ bảng DATVE"""
-    cursor.execute("SELECT DISTINCT YEAR(ngDat) FROM DATVE ORDER BY YEAR(ngDat)")
+    """Lấy danh sách năm từ bảng CHUYENDI"""
+    cursor.execute("SELECT DISTINCT YEAR(ngKh) FROM CHUYENDI ORDER BY YEAR(ngKh)")
     nam_list = [str(r[0]) for r in cursor.fetchall()]
     combo_nam['values'] = nam_list
     if nam_list:
@@ -54,12 +51,13 @@ def load_nam():
         combo_nam.set(str(date.today().year))
 
 def lam_moi_form():
-    """Xóa dữ liệu form và tạo mã nhân viên mới"""
+    """Xóa selection và reset form nhưng giữ Treeview hiện tại"""
+    tree.selection_remove(tree.selection())
     entry_maNV.config(state='normal')
     entry_maNV.delete(0, tk.END)
     entry_maNV.insert(0, auto_maNV())
     entry_maNV.config(state='readonly')
-
+    entry_socccd.delete(0, tk.END)
     entry_hoTen.delete(0, tk.END)
     entry_sdt.delete(0, tk.END)
     combo_phai.set("Chọn giới tính")
@@ -67,26 +65,23 @@ def lam_moi_form():
     entry_dchi.delete(0, tk.END)
     combo_chucvu.set("Chọn chức vụ")
 
-
-
 def toggle_luong_visibility(show=True):
     if show:
-        tree["displaycolumns"] = ("maNV","hoTen","sdt","phai","ngsinh","dchi","chucVu","soChuyen","luong")
+        tree["displaycolumns"] = ("maNV","so_cccd","hoTen","sdt","phai","ngsinh","dchi","chucVu","soChuyen","luong")
     else:
-        tree["displaycolumns"] = ("maNV","hoTen","sdt","phai","ngsinh","dchi","chucVu","soChuyen")
+        tree["displaycolumns"] = ("maNV","so_cccd","hoTen","sdt","phai","ngsinh","dchi","chucVu","soChuyen")
 
 # ------------------ TREEVIEW ------------------
 tree_frame = tk.LabelFrame(root, text="Danh sách nhân viên", font=("Times New Roman",12), bg="#fff8dc", width=900, height=400)
 tree_frame.place(x=50, y=280)
 
-columns = ("maNV","hoTen","sdt","phai","ngsinh","dchi","chucVu","soChuyen","luong")
+columns = ("maNV","so_cccd","hoTen","sdt","phai","ngsinh","dchi","chucVu","soChuyen","luong")
 tree = ttk.Treeview(tree_frame, columns=columns, show="headings", height=15)
-
 for col, text, width in zip(columns,
-    ["Mã NV","Họ Tên","SĐT","Phái","Ngày Sinh","Địa Chỉ","Chức Vụ","Số chuyến","Lương"],
-    [100,150,100,60,100,200,120,100,100]):
+                            ["Mã NV","Số CCCD","Họ Tên","SĐT","Giới Tính","Ngày Sinh","Địa Chỉ","Chức Vụ","Số Chuyến","Lương Thực Lãnh"],
+                            [80,100,150,100,60,100,150,100,80,120]):
     tree.heading(col, text=text)
-    tree.column(col, width=width, anchor="center" if col in ["maNV","sdt","phai","ngsinh","chucVu","soChuyen","luong"] else "w")
+    tree.column(col, width=width, anchor="center")
 
 scrollbar_v = ttk.Scrollbar(tree_frame, orient="vertical", command=tree.yview)
 scrollbar_h = ttk.Scrollbar(tree_frame, orient="horizontal", command=tree.xview)
@@ -96,42 +91,26 @@ scrollbar_v.grid(row=0, column=1, sticky="ns", pady=(5,0))
 scrollbar_h.grid(row=1, column=0, sticky="ew", padx=(5,0))
 tree_frame.grid_rowconfigure(0, weight=1)
 tree_frame.grid_columnconfigure(0, weight=1)
-
 toggle_luong_visibility(False)
-#tree.bind("<<TreeviewSelect>>", hien_thi_chi_tiet)
 
-# ------------------ XEM LƯƠNG ------------------
-def xem_luong():
-    thang_str = combo_thang.get()
-    nam_str = combo_nam.get()
-
-    if not thang_str or not nam_str:
-        messagebox.showwarning("Thiếu thông tin", "Vui lòng chọn tháng và năm!")
-        return
-
-    thang = int(thang_str)
-    nam = int(nam_str)
-
-    # Xóa Treeview
-    for row in tree.get_children():
-        tree.delete(row)
-
-    # Lấy danh sách nhân viên
-    cursor.execute("SELECT maNV, hoTen, sdt, phai, ngsinh, dchi, chucVu FROM NHANVIEN")
+# ------------------ HÀM LOAD DỮ LIỆU ------------------
+def load_data():
+    tree.delete(*tree.get_children())
+    cursor.execute("SELECT maNV, so_cccd, hoTen, sdt, phai, ngSinh, dchi, chucVu FROM NHANVIEN")
     nhanviens = cursor.fetchall()
 
-    # Lấy số chuyến của mỗi nhân viên theo tháng/năm
+    # Đếm số chuyến thực tế từ CHUYENDI
     cursor.execute("""
-        SELECT maNV, COUNT(*) AS soChuyen
-        FROM CHUYENDI
-        WHERE MONTH(ngKh) = ? AND YEAR(ngKh) = ?
-        GROUP BY maNV
-    """, (thang, nam))
+        SELECT cn.maNV, COUNT(*) 
+        FROM CHUYENDI_NHANVIEN cn
+        JOIN CHUYENDI c ON cn.maCD = c.maCD
+        WHERE c.trangThai=N'Hoạt động'
+        GROUP BY cn.maNV
+    """)
     chuyens = dict(cursor.fetchall())
 
-    # Hiển thị
     for nv in nhanviens:
-        maNV, hoTen, sdt, phai, ngsinh, dchi, chucVu = nv
+        maNV, so_cccd, hoTen, sdt, phai, ngSinh, dchi, chucVu = nv
         soChuyen = chuyens.get(maNV, 0)
         if chucVu == "Cơ Trưởng":
             luong_cb = 2000000
@@ -140,105 +119,198 @@ def xem_luong():
         else:
             luong_cb = 1200000
         luong_thuc = luong_cb * soChuyen
-        tree.insert("", "end", values=(maNV, hoTen, sdt, phai, ngsinh, dchi, chucVu, soChuyen, luong_thuc))
+        tree.insert("", "end", values=(
+            str(maNV),
+            str(so_cccd).zfill(12),
+            str(hoTen),
+            str(sdt).zfill(10),
+            str(phai),
+            str(ngSinh),
+            str(dchi),
+            str(chucVu),
+            str(soChuyen),
+            str(luong_thuc)
+        ))
+
+# ------------------ XEM LƯƠNG THEO THÁNG ------------------
+def xem_luong():
+    thang_str = combo_thang.get()
+    nam_str = combo_nam.get()
+    if not thang_str or not nam_str:
+        messagebox.showwarning("Thiếu thông tin", "Vui lòng chọn tháng và năm!")
+        return
+    thang = int(thang_str)
+    nam = int(nam_str)
+
+    tree.delete(*tree.get_children())
+    cursor.execute("SELECT maNV, so_cccd, hoTen, sdt, phai, ngSinh, dchi, chucVu FROM NHANVIEN")
+    nhanviens = cursor.fetchall()
+
+    cursor.execute("""
+        SELECT cn.maNV, COUNT(*) 
+        FROM CHUYENDI_NHANVIEN cn
+        JOIN CHUYENDI c ON cn.maCD = c.maCD
+        WHERE MONTH(c.ngKh)=? AND YEAR(c.ngKh)=? AND c.trangThai=N'Hoạt động'
+        GROUP BY cn.maNV
+    """, (thang, nam))
+    chuyens = dict(cursor.fetchall())
+
+    for nv in nhanviens:
+        maNV, so_cccd, hoTen, sdt, phai, ngSinh, dchi, chucVu = nv
+        soChuyen = chuyens.get(maNV,0)
+        if chucVu == "Cơ Trưởng":
+            luong_cb = 2000000
+        elif chucVu == "Hướng Dẫn Viên":
+            luong_cb = 1800000
+        else:
+            luong_cb = 1200000
+        luong_thuc = luong_cb * soChuyen
+        tree.insert("", "end", values=(
+            str(maNV),
+            str(so_cccd).zfill(12),
+            str(hoTen),
+            str(sdt).zfill(10),
+            str(phai),
+            str(ngSinh),
+            str(dchi),
+            str(chucVu),
+            str(soChuyen),
+            str(luong_thuc)
+        ))
 
     toggle_luong_visibility(True)
 
-# ------------------ CHỨC NĂNG TREEVIEW ------------------
+# ------------------ KIỂM TRA CCCD ------------------
+def kiem_tra_cccd(so_cccd: str) -> bool:
+    return bool(re.fullmatch(r"0\d{11}", so_cccd))
+
+
+
+# ------------------ CHỨC NĂNG ------------------
 def them():
-    entry_hoTen.focus()
-    ma = entry_maNV.get()
+    maNV = auto_maNV()  
+    so_cccd = entry_socccd.get().strip().zfill(12)
     hoTen = entry_hoTen.get()
-    sdt = entry_sdt.get()
+    sdt = entry_sdt.get().strip().zfill(10)
     phai = combo_phai.get()
-    ngsinh = date_ngsinh.get_date().strftime('%d/%m/%Y')
+    ngSinh = date_ngsinh.get_date().strftime('%Y-%m-%d')
     dchi = entry_dchi.get()
-    chucvu = combo_chucvu.get()
-    tree.insert("", "end", values=(ma, hoTen, sdt, phai, ngsinh, dchi, chucvu, 0, 0))
-    lam_moi_form()
+    chucVu = combo_chucvu.get()
+
+    if not kiem_tra_cccd(so_cccd):
+        messagebox.showerror("Lỗi","CCCD phải 12 số bắt đầu 0")
+        return
+    if not (hoTen and sdt and chucVu):
+        messagebox.showwarning("Thiếu dữ liệu","Nhập đầy đủ thông tin!")
+        return
+
+    # Kiểm tra trùng CCCD trên Treeview
+    for item in tree.get_children():
+        cccd_in_tree = str(tree.item(item)['values'][1]).zfill(12)
+        if cccd_in_tree == so_cccd:
+            messagebox.showerror("Lỗi","CCCD đã tồn tại!")
+            return
+
+    tree.insert("", "end", values=(maNV, so_cccd, hoTen, sdt, phai, ngSinh, dchi, chucVu,0,0))
+    lam_moi_form()  # reset form và sinh mã NV tiếp theo
+
+
+def xoa():
+    selected = tree.selection()
+    if not selected:
+        messagebox.showwarning("Chưa chọn","Chọn nhân viên để xóa!")
+        return
+    confirm = messagebox.askyesno("Xác nhận","Bạn có chắc muốn xóa?")
+    if confirm:
+        maNV = tree.item(selected[0])['values'][0]
+        deleted_items.append(maNV)
+        reusable_ids.append(maNV)
+        tree.delete(selected[0])
+        lam_moi_form()
+
+def on_tree_select(event):
+    selected = tree.selection()
+    if not selected:
+        return
+    item = tree.item(selected[0])['values']
+    if not item:
+        return
+
+    entry_maNV.config(state='normal')
+    entry_maNV.delete(0, tk.END)
+    entry_maNV.insert(0, str(item[0]))
+    entry_maNV.config(state='readonly')
+
+    entry_socccd.delete(0, tk.END)
+    entry_socccd.insert(0, str(item[1]).zfill(12))
+
+    entry_hoTen.delete(0, tk.END)
+    entry_hoTen.insert(0, str(item[2]))
+
+    entry_sdt.delete(0, tk.END)
+    entry_sdt.insert(0, str(item[3]).zfill(10))
+
+    combo_phai.set(str(item[4]))
+    date_ngsinh.set_date(datetime.strptime(str(item[5]), '%Y-%m-%d').date())
+    entry_dchi.delete(0, tk.END)
+    entry_dchi.insert(0, str(item[6]))
+    combo_chucvu.set(str(item[7]))
+
+tree.bind("<<TreeviewSelect>>", on_tree_select)
 
 def sua():
     selected = tree.selection()
     if not selected:
-        messagebox.showwarning("Chưa chọn", "Vui lòng chọn nhân viên để sửa!")
+        messagebox.showwarning("Chưa chọn","Chọn nhân viên để sửa!")
         return
-    ma = tree.item(selected[0], "values")[0]
-    ten = entry_hoTen.get().strip()
-    sdt_val = entry_sdt.get().strip()
-    phai_val = combo_phai.get()
-    ngsinh_val = date_ngsinh.get_date().strftime('%Y-%m-%d')
-    dchi_val = entry_dchi.get().strip()
-    chucvu_val = combo_chucvu.get().strip()
-    tree.item(selected[0], values=(ma, ten, sdt_val, phai_val, ngsinh_val, dchi_val, chucvu_val, 0, 0))
-def xoa():
-    selected = tree.selection()
-    if not selected:
-        messagebox.showwarning("Chưa chọn", "Vui lòng chọn nhân viên cần xóa!")
-        return
-    confirm = messagebox.askyesno("Xác nhận", "Bạn có chắc muốn xóa nhân viên này?")
-    if not confirm:
-        return
-    for item in selected:
-        maNV = tree.item(item, "values")[0]
-        tree.delete(item)  # <-- xóa khỏi Treeview luôn
+    
+    maNV = tree.item(selected[0])['values'][0]
+    so_cccd = entry_socccd.get().strip().zfill(12)
+    sdt = entry_sdt.get().strip().zfill(10)
 
-    conn.commit()
-    messagebox.showinfo("Thành công!")
-def luu():
-    confirm = messagebox.askyesno("Xác nhận", "Bạn có chắc muốn lưu tất cả dữ liệu vào CSDL?")
-    if not confirm:
+    # Kiểm tra CCCD hợp lệ và trùng
+    if not kiem_tra_cccd(so_cccd):
+        messagebox.showerror("Lỗi","CCCD phải 12 số bắt đầu 0")
         return
-
-    # 👉 Xóa toàn bộ dữ liệu cũ trong bảng NHANVIEN
-    '''cursor.execute("DELETE FROM NHANVIEN")
-    conn.commit()'''
-
-    # 👉 Duyệt tất cả các dòng trong Treeview và lưu lại
     for item in tree.get_children():
-        maNV, hoTen, sdt, phai, ngsinh, dchi, chucvu, soChuyen, _ = tree.item(item, "values")
+        if tree.item(item)['values'][1] == so_cccd and tree.item(item)['values'][0] != maNV:
+            messagebox.showerror("Lỗi","CCCD đã tồn tại!")
+            return
 
-        # Kiểm tra SĐT hợp lệ
-        if not (sdt.isdigit() and len(sdt) == 10 and sdt.startswith("0")):
-            messagebox.showwarning("Bỏ qua", f"SĐT {sdt} của {hoTen} không hợp lệ, không lưu vào CSDL!")
-            continue
+    hoTen = entry_hoTen.get()
+    sdt = entry_sdt.get()
+    phai = combo_phai.get()
+    ngSinh = date_ngsinh.get_date().strftime('%Y-%m-%d')
+    dchi = entry_dchi.get()
+    chucVu = combo_chucvu.get()
 
-        # Thêm vào CSDL
-        cursor.execute(
-            "INSERT INTO NHANVIEN(maNV, hoTen, sdt, phai, ngsinh, dchi, chucVu) VALUES (?, ?, ?, ?, ?, ?, ?)",
-            (maNV, hoTen, sdt, phai, ngsinh, dchi, chucvu)
-        )
-
-        conn.commit()
-        messagebox.showinfo("Thành công", "Đã lưu toàn bộ dữ liệu Treeview vào CSDL!")
-    load_data()
+    tree.item(selected[0], values=(maNV, so_cccd, hoTen, sdt, phai, ngSinh, dchi, chucVu, 0, 0))
     lam_moi_form()
 
-
-def hien_thi_chi_tiet(event):
-    selected = tree.selection()
-    if selected:
-        ma, hoTen, sdt_val, phai_val, ngsinh_val, dchi_val, chucvu_val, soChuyen_val, luong_val = tree.item(selected[0], "values")
-        entry_maNV.config(state='normal')
-        entry_maNV.delete(0, tk.END)
-        entry_maNV.insert(0, ma)
-        entry_maNV.config(state='readonly')
-
-        entry_hoTen.delete(0, tk.END)
-        entry_hoTen.insert(0, hoTen)
-        entry_sdt.delete(0, tk.END)
-        entry_sdt.insert(0, sdt_val)
-        combo_phai.set(phai_val)
-        combo_chucvu.set(chucvu_val)
-        entry_dchi.delete(0, tk.END)
-        entry_dchi.insert(0, dchi_val)
-
-        try:
-            y, m, d = map(int, str(ngsinh_val).split('-'))
-            date_ngsinh.set_date(date(d, m, y))
-        except:
-            date_ngsinh.set_date(date.today())
+def luu():
+    for item in tree.get_children():
+        maNV, so_cccd, hoTen, sdt, phai, ngSinh, dchi, chucVu, _, _ = tree.item(item,"values")
+        cursor.execute("SELECT 1 FROM NHANVIEN WHERE maNV=?", (maNV,))
+        if cursor.fetchone():
+            cursor.execute("""
+                UPDATE NHANVIEN SET so_cccd=?, hoTen=?, sdt=?, phai=?, ngSinh=?, dchi=?, chucVu=?
+                WHERE maNV=?
+            """,(so_cccd, hoTen, sdt, phai, ngSinh, dchi, chucVu, maNV))
+        else:
+            cursor.execute("""
+                INSERT INTO NHANVIEN(maNV,so_cccd,hoTen,sdt,phai,ngSinh,dchi,chucVu)
+                VALUES(?,?,?,?,?,?,?,?)
+            """,(maNV, so_cccd, hoTen, sdt, phai, ngSinh, dchi, chucVu))
+    for maNV in deleted_items:
+        cursor.execute("DELETE FROM NHANVIEN WHERE maNV=?", (maNV,))
+    deleted_items.clear()
+    conn.commit()
+    load_data()
+    lam_moi_form()
+    messagebox.showinfo("Thành công","Đã lưu vào CSDL!")
 
 def huy():
+    
     lam_moi_form()
 
 def thoat():
@@ -246,76 +318,71 @@ def thoat():
     root.destroy()
 
 # ------------------ GIAO DIỆN ------------------
-tk.Label(root, text="Quản Lý Nhân Viên", font=("Arial", 20, "bold"), bg="#FFFACD").place(x=330, y=20)
+tk.Label(root, text="Quản Lý Nhân Viên", font=("Arial",20,"bold"), bg="#FFFACD").place(x=330,y=20)
+form_frame = tk.Frame(root,bg="#FFFACD")
+form_frame.place(x=80,y=60)
 
-form_frame = tk.Frame(root, bg="#FFFACD")
-form_frame.place(x=80, y=60)
+tk.Label(form_frame,text="Mã NV:", bg="#FFFACD").grid(row=0,column=0,padx=5,pady=5,sticky="w")
+entry_maNV = tk.Entry(form_frame,width=25)
+entry_maNV.grid(row=0,column=1,padx=5,pady=5)
 
-# Form
-tk.Label(form_frame, text="Mã NV:", font=("Arial", 11), bg="#FFFACD").grid(row=0, column=0, sticky="w", padx=10, pady=8)
-entry_maNV = tk.Entry(form_frame, width=25)
-entry_maNV.grid(row=0, column=1, padx=10, pady=8)
+tk.Label(form_frame,text="Số CCCD:", bg="#FFFACD").grid(row=0,column=2,padx=5,pady=5,sticky="w")
+entry_socccd = tk.Entry(form_frame,width=25)
+entry_socccd.grid(row=0,column=3,padx=5,pady=5)
 
-tk.Label(form_frame, text="Họ tên:", font=("Arial", 11), bg="#FFFACD").grid(row=0, column=2, sticky="w", padx=10, pady=8)
-entry_hoTen = tk.Entry(form_frame, width=25)
-entry_hoTen.grid(row=0, column=3, padx=10, pady=8)
+tk.Label(form_frame,text="Họ tên:", bg="#FFFACD").grid(row=0,column=4,padx=5,pady=5,sticky="w")
+entry_hoTen = tk.Entry(form_frame,width=25)
+entry_hoTen.grid(row=0,column=5,padx=5,pady=5)
 
-tk.Label(form_frame, text="SĐT:", font=("Arial", 11), bg="#FFFACD").grid(row=1, column=0, sticky="w", padx=10, pady=8)
-entry_sdt = tk.Entry(form_frame, width=25)
-entry_sdt.grid(row=1, column=1, padx=10, pady=8)
+tk.Label(form_frame,text="SĐT:", bg="#FFFACD").grid(row=1,column=0,padx=5,pady=5,sticky="w")
+entry_sdt = tk.Entry(form_frame,width=25)
+entry_sdt.grid(row=1,column=1,padx=5,pady=5)
 
-tk.Label(form_frame, text="Phái:", font=("Arial", 11), bg="#FFFACD").grid(row=1, column=2, sticky="w", padx=10, pady=8)
-combo_phai = ttk.Combobox(form_frame, width=22, state="readonly", values=["Nam","Nữ"])
+tk.Label(form_frame,text="Giới tính:", bg="#FFFACD").grid(row=1,column=2,padx=5,pady=5,sticky="w")
+combo_phai = ttk.Combobox(form_frame,width=22,state="readonly",values=["Nam","Nữ"])
 combo_phai.set("Chọn giới tính")
-combo_phai.grid(row=1, column=3, padx=10, pady=8)
+combo_phai.grid(row=1,column=3,padx=5,pady=5)
 
-tk.Label(form_frame, text="Ngày sinh:", font=("Arial", 11), bg="#FFFACD").grid(row=2, column=0, sticky="w", padx=10, pady=8)
-date_ngsinh = DateEntry(form_frame, width=23, date_pattern='dd/mm/yyyy')
-date_ngsinh.grid(row=2, column=1, padx=10, pady=8)
+tk.Label(form_frame,text="Ngày sinh:", bg="#FFFACD").grid(row=2,column=0,padx=5,pady=5,sticky="w")
+date_ngsinh = DateEntry(form_frame,width=23,date_pattern="dd/mm/yyyy")
+date_ngsinh.grid(row=2,column=1,padx=5,pady=5)
 
-tk.Label(form_frame, text="Địa chỉ:", font=("Arial", 11), bg="#FFFACD").grid(row=2, column=2, sticky="w", padx=10, pady=8)
-entry_dchi = tk.Entry(form_frame, width=25)
-entry_dchi.grid(row=2, column=3, padx=10, pady=8)
+tk.Label(form_frame,text="Địa chỉ:", bg="#FFFACD").grid(row=2,column=2,padx=5,pady=5,sticky="w")
+entry_dchi = tk.Entry(form_frame,width=25)
+entry_dchi.grid(row=2,column=3,padx=5,pady=5)
 
-tk.Label(form_frame, text="Chức vụ:", font=("Arial", 11), bg="#FFFACD").grid(row=3, column=0, sticky="w", padx=10, pady=8)
-combo_chucvu = ttk.Combobox(form_frame, width=22, state="readonly", values=["Cơ Trưởng","Hướng Dẫn Viên","Nhân Viên"])
+tk.Label(form_frame,text="Chức vụ:", bg="#FFFACD").grid(row=3,column=0,padx=5,pady=5,sticky="w")
+combo_chucvu = ttk.Combobox(form_frame,width=22,state="readonly",values=["Cơ Trưởng","Hướng Dẫn Viên","Nhân Viên"])
 combo_chucvu.set("Chọn chức vụ")
-combo_chucvu.grid(row=3, column=1, padx=10, pady=8)
+combo_chucvu.grid(row=3,column=1,padx=5,pady=5)
 
-# Tháng & Năm
-tk.Label(form_frame, text="Tháng:", font=("Arial", 11), bg="#FFFACD").grid(row=3, column=2, sticky="w", padx=(0,0), pady=8)
-combo_thang = ttk.Combobox(form_frame, width=5, values=[str(i) for i in range(1,13)], state="readonly")
+tk.Label(form_frame,text="Tháng:", bg="#FFFACD").grid(row=3,column=2,padx=5,pady=5,sticky="w")
+combo_thang = ttk.Combobox(form_frame,width=5,state="readonly",values=[str(i) for i in range(1,13)])
 combo_thang.set(str(date.today().month))
-combo_thang.grid(row=3, column=2, padx=(60,0), sticky="w")
+combo_thang.grid(row=3,column=2,padx=(60,0),sticky="w")
 
-tk.Label(form_frame, text="Năm:", font=("Arial", 11), bg="#FFFACD").grid(row=3, column=3, sticky="w", padx=(0,0), pady=8)
-combo_nam = ttk.Combobox(form_frame, width=7, state="readonly")
-combo_nam.grid(row=3, column=3, padx=(45,0), sticky="w")
+tk.Label(form_frame,text="Năm:", bg="#FFFACD").grid(row=3,column=3,padx=5,pady=5,sticky="w")
+combo_nam = ttk.Combobox(form_frame,width=7,state="readonly")
+combo_nam.grid(row=3,column=3,padx=(45,0),sticky="w")
 
-btn_xemluong = tk.Button(form_frame, text="👁 Xem lương", bg="#ADD8E6", font=("Arial",10,"bold"), command=xem_luong)
-btn_xemluong.grid(row=3, column=4, padx=20, pady=8)
+btn_xemluong = tk.Button(form_frame,text="👁 Xem lương",bg="#ADD8E6",font=("Arial",10,"bold"),command=xem_luong)
+btn_xemluong.grid(row=3,column=4,padx=10,pady=5)
+
+# Buttons
+btn_them = tk.Button(root,text="Thêm",bg="#87cefa",font=("Arial",12,"bold"),width=10,command=them)
+btn_them.place(x=100,y=235)
+btn_sua = tk.Button(root,text="Sửa",bg="#87cefa",font=("Arial",12,"bold"),width=10,command=sua)
+btn_sua.place(x=240,y=235)
+btn_xoa = tk.Button(root,text="Xóa",bg="#87cefa",font=("Arial",12,"bold"),width=10,command=xoa)
+btn_xoa.place(x=380,y=235)
+btn_huy = tk.Button(root,text="Hủy",bg="#87cefa",font=("Arial",12,"bold"),width=10,command=huy)
+btn_huy.place(x=520,y=235)
+btn_luu = tk.Button(root,text="Lưu",bg="#87cefa",font=("Arial",12,"bold"),width=10,command=luu)
+btn_luu.place(x=660,y=235)
+btn_thoat = tk.Button(root,text="Thoát",bg="#87cefa",font=("Arial",12,"bold"),width=10,command=thoat)
+btn_thoat.place(x=800,y=235)
 
 load_nam()
-
-# ------------------ NÚT CHỨC NĂNG ------------------
-btn_them = tk.Button(root, text="Thêm", bg="#87cefa", font=("Arial",12,"bold"), width=10, command=them)
-btn_them.place(x=100, y=235)
-btn_sua = tk.Button(root, text="Sửa", bg="#87cefa", font=("Arial",12,"bold"), width=10, command=sua)
-btn_sua.place(x=240, y=235)
-btn_xoa = tk.Button(root, text="Xóa", bg="#87cefa", font=("Arial",12,"bold"), width=10, command=xoa)
-btn_xoa.place(x=380, y=235)
-btn_huy = tk.Button(root, text="Hủy", bg="#87cefa", font=("Arial",12,"bold"), width=10, command=huy)
-btn_huy.place(x=520, y=235)
-btn_luu = tk.Button(root, text="Lưu", bg="#87cefa", font=("Arial",12,"bold"), width=10, command=luu)
-btn_luu.place(x=660, y=235)
-btn_thoat = tk.Button(root, text="Thoát", bg="#87cefa", font=("Arial",12,"bold"), width=10, command=thoat)
-btn_thoat.place(x=800, y=235)
-
-toggle_luong_visibility(False)
-tree.bind("<<TreeviewSelect>>", hien_thi_chi_tiet)
-
-# ------------------ KHỞI TẠO ------------------
 load_data()
 lam_moi_form()
-
 root.mainloop()

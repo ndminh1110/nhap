@@ -4,15 +4,16 @@ import pyodbc
 import subprocess
 import sys,os
 
-# ======= HÀM XỬ LÝ ========
+# ======= Dang nhap ========
 def login():
     username = entry_user.get()
     password = entry_pass.get()
 
-        # Kết nối tới SQL Server
+    # Kết nối tới SQL Server
     conn = pyodbc.connect(
             'DRIVER={SQL Server};'
-            'SERVER=ADMIN-PC;'          # hoặc tên server thật, ví dụ: LAPTOP\\SQLEXPRESS
+           # 'SERVER=ADMIN-PC;'
+            'SERVER=localhost\\SQLEXPRESS01;'
             'DATABASE=QuanLyTuyenDuLich;'
             'Trusted_Connection=yes;'    # Nếu bạn dùng Windows Authentication
         )
@@ -25,9 +26,9 @@ def login():
             #root.destroy()  # Đóng form đăng nhập
             # Mở form tương ứng
             if role == "QuanLy":
-                subprocess.Popen(["python", "form_trangChu_QuanLy.py"])
+                subprocess.Popen(["python", "TrangChu_QuanLy.py"])
             elif role == "NhanVien":
-                subprocess.Popen(["python", "form_trangChu_NhanVien.py"])  
+                subprocess.Popen(["python", "TrangChu_NhanVien.py"])  
     else:
             messagebox.showerror("Lỗi", "Sai tên đăng nhập hoặc mật khẩu!")
     conn.close()

@@ -4,23 +4,13 @@ import pyodbc
 
 conn = pyodbc.connect(
     'DRIVER={SQL Server};'
-    'SERVER=localhost\\SQLEXPRESS01;'  
+    #'SERVER=ADMIN-PC;'  
+    'SERVER=localhost\\SQLEXPRESS01;'
     'DATABASE=QuanLyTuyenDuLich;'
     'Trusted_Connection=yes;'
 )
 cursor = conn.cursor()
 # ------------------ TẠO BẢNG NẾU CHƯA CÓ ------------------
-cursor.execute("""
-IF OBJECT_ID('TUYENDULICH', 'U') IS NULL
-BEGIN
-    CREATE TABLE TUYENDULICH (
-        maTuyen NVARCHAR(10) PRIMARY KEY,
-        ddDi NVARCHAR(100),
-        ddDen NVARCHAR(200)
-    )
-END
-""")
-conn.commit()
 
 # ------------------ DANH SÁCH ĐỊA ĐIỂM ------------------
 list_di = ["Hà Nội", "Đà Nẵng", "Hồ Chí Minh"]
@@ -42,14 +32,16 @@ tk.Label(root, text="Quản Lý Tuyến Du Lịch", font=("Arial", 20, "bold"), 
 frame = tk.LabelFrame(root, text="Danh sách tuyến du lịch", font=("Arial", 12, "bold"), bg="#FFFACD", width=850, height=280)
 frame.place(x=70, y=270)
 
-columns = ("maTuyen", "ddDi", "ddDen")
+columns = ("maTuyen", "ddDi", "ddDen","tt")
 tree = ttk.Treeview(frame, columns=columns, show="headings", height=12)
 tree.heading("maTuyen", text="Mã Tuyến")
 tree.heading("ddDi", text="Địa Điểm Đi")
 tree.heading("ddDen", text="Địa Điểm Đến")
+tree.heading("tt", text="Trạng Thái")
 tree.column("maTuyen", width=150, anchor="center")
 tree.column("ddDi", width=150, anchor="center")
-tree.column("ddDen", width=400, anchor="center")
+tree.column("ddDen", width=300, anchor="center")
+tree.column("tt", width=100, anchor ="center")
 
 scrollbar = ttk.Scrollbar(frame, orient="vertical", command=tree.yview)
 tree.configure(yscrollcommand=scrollbar.set)
@@ -59,27 +51,42 @@ scrollbar.pack(side="right", fill="y")
 # ------------------ HÀM SINH MÃ TUYẾN ------------------
 
 def tao_ma_tuyen_moi():
+    # Ưu tiên các mã đã bị xoá
+    '''if reusable_ids:
+        return reusable_ids.pop(0)  # lấy mã đầu tiên và xóa khỏi danh sách'''
+
     """Tự động sinh mã tuyến mới dựa vào cả Treeview và CSDL, lấp khoảng trống."""
-    # --- Lấy mã từ Treeview ---
-    ma_tree = [tree.item(item)['values'][0].strip() for item in tree.get_children() if tree.item(item)['values']]
-    so_tree = [int(ma[2:]) for ma in ma_tree if ma.startswith("TD") and ma[2:].isdigit()]
-
-    # --- Lấy mã từ CSDL ---
-    cursor.execute("SELECT maTuyen FROM TUYENDULICH")
-    ma_sql = [row[0].strip() for row in cursor.fetchall() if row[0]]
-    so_sql = [int(ma[2:]) for ma in ma_sql if ma.startswith("TD") and ma[2:].isdigit()]
-
-    # --- Gộp tất cả và sắp xếp ---
-    so_all = sorted(set(so_tree + so_sql))
+    '''# --- Lấy mã từ Treeview ---
+    ma_list = [tree.item(item)['values'][0].strip() for item in tree.get_children()]
+# --- Gộp tất cả và sắp xếp ---
+    if not ma_list:
+        return "TD0001"
+    so_list = sorted([int(ma[2:]) for ma in ma_list if ma[2:].isdigit()]) # isdigit: chỉ lấy những chuỗi thực sự là số, bỏ trường hợp bị lỗi.
 
     # --- Tìm khoảng trống đầu tiên ---
     next_num = 1
-    for num in so_all:
+    for num in so_list:
         if num == next_num:
             next_num += 1
         elif num > next_num:
             break
 
+    return f"TD{next_num:04d}"'''
+    # Lấy mã từ Treeview
+    ma_list_tree = [tree.item(item)['values'][0].strip() for item in tree.get_children()]
+    
+    # Lấy mã từ CSDL (kể cả đã xóa)
+    cursor.execute("SELECT maTuyen FROM TUYENDULICH")
+    ma_list_sql = [row[0].strip() for row in cursor.fetchall()]
+    
+    # Gộp danh sách
+    ma_list = list(set(ma_list_tree + ma_list_sql))
+    
+    if not ma_list:
+        return "TD0001"
+    
+    so_list = sorted([int(ma[2:]) for ma in ma_list if ma[2:].isdigit()])
+    next_num = so_list[-1] + 1  # mã mới hoàn toàn (tăng lên 1)
     return f"TD{next_num:04d}"
 
 
@@ -87,7 +94,7 @@ def tao_ma_tuyen_moi():
 tk.Label(root, text="Mã Tuyến:", font=("Arial", 12), bg="#FFFACD").place(x=200, y=130)
 entry_matuyen = tk.Entry(root, width=50)
 entry_matuyen.place(x=350, y=130)
-entry_matuyen.insert(0, tao_ma_tuyen_moi())
+#entry_matuyen.insert(0, tao_ma_tuyen_moi())
 entry_matuyen.config(state="readonly")
 
 tk.Label(root, text="Địa Điểm Đi:", font=("Arial", 12), bg="#FFFACD").place(x=200, y=170)
@@ -113,7 +120,8 @@ def cap_nhat_ddDen(event=None):
         den_list = []
 
     # Loại bỏ tuyến đã có trong CSDL
-    cursor.execute("SELECT ddDen FROM TUYENDULICH WHERE ddDi=?", (di,))
+    #cursor.execute("SELECT ddDen FROM TUYENDULICH WHERE ddDi=?", (di,))
+    cursor.execute("SELECT ddDen FROM TUYENDULICH WHERE ddDi=? AND trangThai=N'Hoạt động'", (di,))
     csdl_den = [row[0] for row in cursor.fetchall()]
 
     # Loại bỏ tuyến đã có trong Treeview
@@ -133,13 +141,13 @@ def load_data():
         tree.delete(item)
 
     # Lấy dữ liệu từ SQL
-    cursor.execute("SELECT maTuyen, ddDi, ddDen FROM TUYENDULICH")
+    cursor.execute("SELECT maTuyen, ddDi, ddDen, trangThai FROM TUYENDULICH where trangThai=N'Hoạt động'")
     rows = cursor.fetchall()
 
     # Chèn từng dòng (lưu ý: không dùng str(row))
     for row in rows:
         # row là tuple ('TD0001', 'Hà Nội', 'Đà Nẵng')
-        tree.insert("", "end", values=(row[0].strip(), row[1].strip(), row[2].strip()))
+        tree.insert("", "end", values=(row[0].strip(), row[1].strip(), row[2].strip(), row[3].strip()))
 
 # ------------------ HÀM CHỨC NĂNG ------------------
 trang_thai = None
@@ -152,8 +160,6 @@ def lam_moi_form():
     entry_matuyen.insert(0, tao_ma_tuyen_moi())
     entry_matuyen.config(state='readonly')
 
-
-
 def them_tuyen():
     global trang_thai
     trang_thai = "them"
@@ -163,88 +169,102 @@ def them_tuyen():
     if not di or not den:
         messagebox.showwarning("Thiếu thông tin", "Vui lòng chọn địa điểm đi và đến")
         return
-    tree.insert("", "end", values=(ma, di, den))
+    tree.insert("", "end", values=(ma, di, den, "Hoạt động"))
     lam_moi_form()
 
-def sua_tuyen():
-    global trang_thai
+def sua_tuyen(): 
     selected = tree.selection()
     if not selected:
-        messagebox.showwarning("Lỗi", "Chưa chọn tuyến để sửa")
+        messagebox.showwarning("Chưa chọn", "Vui lòng chọn tuyến để sửa!")
         return
-    trang_thai = "sua"
-    item = selected[0]
-    ma, di, den = tree.item(item, "values")
-    entry_matuyen.config(state='normal')
-    entry_matuyen.delete(0, tk.END)
-    entry_matuyen.insert(0, ma)
-    entry_matuyen.config(state='readonly')
-    entry_ddDi.set(di)
-    entry_ddDen.set(den)
+
+    maTuyen = tree.item(selected[0])['values'][0].strip()
+    ddDi = entry_ddDi.get().strip()
+    ddDen = entry_ddDen.get().strip()
+
+    if not ddDi or not ddDen:
+        messagebox.showwarning("Thiếu dữ liệu", "Vui lòng chọn đầy đủ địa điểm đi và đến!")
+        return
+
+    # Cập nhật trực tiếp trên Treeview
+    tree.item(selected[0], values=(maTuyen, ddDi, ddDen, "Hoạt động"))
+
+    # Cập nhật xuống SQL ngay lập tức (giữ trạng thái Hoạt động)
+    cursor.execute(
+        "UPDATE TUYENDULICH SET ddDi=?, ddDen=?, trangThai=N'Hoạt động' WHERE maTuyen=?",
+        (ddDi, ddDen, maTuyen)
+    )
+    conn.commit()
+
+    messagebox.showinfo("Thành công", "Đã cập nhật thông tin tuyến du lịch!")
+    lam_moi_form()
+
+
+deleted_items = []  # danh sách toàn cục
+reusable_ids = [] # cắt mã đã bị xoá
 
 def xoa_tuyen():
-    selected = tree.selection()
+    '''selected = tree.selection()
     if not selected:
-        messagebox.showwarning("Lỗi", "Chưa chọn tuyến để xóa")
+        messagebox.showwarning("Chưa chọn", "Vui lòng chọn khách hàng để xóa!")
         return
-    confirm = messagebox.askyesno("Xác nhận", "Bạn có chắc muốn xóa tuyến này?")
+    
+    confirm = messagebox.askyesno("Xác nhận", "Bạn có chắc muốn xóa?")
     if confirm:
         for item in selected:
-            ma = tree.item(item, "values")[0]  # lấy mã tuyến
+            ma = tree.item(item, "values")[0]
             tree.delete(item)
-            lam_moi_form()
-            # Xóa trong CSDL
-         #  cursor.execute("DELETE FROM TUYENDULICH WHERE maTuyen=?", (ma,))
-           # conn.commit()
+            cursor.execute("UPDATE TUYENDULICH SET trangThai=N'Đã xóa' WHERE maTuyen=?", (ma,))
+        maTuyen = tree.item(selected[0])['values'][0]  # Lưu mã khách hàng
+        deleted_items.append(maTuyen)  # Ghi vào danh sách xóa tạm
+        tree.delete(selected[0])   # Xóa trên Treeview
+        conn.commit
+        lam_moi_form()'''
+    selected = tree.selection()
+    if not selected:
+        messagebox.showwarning("Chưa chọn", "Vui lòng chọn tuyến để xóa!")
+        return
+    
+    confirm = messagebox.askyesno("Xác nhận", "Bạn có chắc muốn xóa tuyến này không?")
+    if confirm:
+        for item in selected:
+            ma = tree.item(item, "values")[0]
+
+            # Xóa trên Treeview
+            tree.delete(item)
+
+            # Cập nhật trong SQL
+            cursor.execute("UPDATE TUYENDULICH SET trangThai=N'Đã xóa' WHERE maTuyen=?", (ma,))
+        
+        conn.commit()
+        messagebox.showinfo("Thành công", "Đã xóa tuyến du lịch!")
+        lam_moi_form()
+        load_data()
+
 def luu_tuyen():
+  
     try:
-        # 1️⃣ Lấy dữ liệu hiện có trong SQL
-        cursor.execute("SELECT maTuyen, ddDi, ddDen FROM TUYENDULICH")
-        data_sql = cursor.fetchall()
-        dict_sql = {row[0]: (row[1], row[2]) for row in data_sql}  # {maTuyen: (ddDi, ddDen)}
-
-        # 2️⃣ Lấy dữ liệu hiện có trên Treeview
-        data_tree = {}
         for item in tree.get_children():
-            values = tree.item(item, "values")
-            if len(values) < 3:
-                continue  # ⚠️ Bỏ qua dòng lỗi thiếu dữ liệu
-            ma, di, den = values
-            if ma and di and den and di != "Chọn địa điểm đi" and den != "Chọn địa điểm đến":
-                data_tree[ma] = (di.strip(), den.strip())
-
-        # 3️⃣ Xử lý thêm hoặc cập nhật
-        for ma, (di, den) in data_tree.items():
-            if ma not in dict_sql:
-                # ✅ Tuyến mới → thêm vào SQL
-                cursor.execute("""
-                    INSERT INTO TUYENDULICH (maTuyen, ddDi, ddDen)
-                    VALUES (?, ?, ?)
-                """, (ma, di, den))
-            else:
-                # ✅ Nếu có thay đổi → cập nhật
-                di_sql, den_sql = dict_sql[ma]
-                if di != di_sql or den != den_sql:
-                    cursor.execute("""
-                        UPDATE TUYENDULICH
-                        SET ddDi = ?, ddDen = ?
-                        WHERE maTuyen = ?
-                    """, (di, den, ma))
-
-        # 4️⃣ Xử lý xóa (những tuyến không còn trong Treeview)
-        for ma in list(dict_sql.keys()):
-            if ma not in data_tree:
-                cursor.execute("DELETE FROM TUYENDULICH WHERE maTuyen = ?", (ma,))
-
-        # 5️⃣ Lưu thay đổi
+            maTuyen, ddDi, ddDen, tt = tree.item(item, "values")
+            cursor.execute("""
+                IF NOT EXISTS (SELECT 1 FROM TUYENDULICH WHERE maTuyen=?)
+                    INSERT INTO TUYENDULICH (maTuyen, ddDi, ddDen, trangThai)
+                    VALUES (?, ?, ?, N'Hoạt động')
+                ELSE
+                    UPDATE TUYENDULICH
+                    SET ddDi=?, ddDen=?, trangThai=N'Hoạt động'
+                    WHERE maTuyen=?
+            """, (maTuyen, maTuyen, ddDi, ddDen, ddDi, ddDen, maTuyen))
+        
         conn.commit()
         messagebox.showinfo("Thành công", "Đã lưu và đồng bộ dữ liệu với CSDL!")
         load_data()
-
+        lam_moi_form()
     except Exception as e:
         messagebox.showerror("Lỗi", f"Lưu dữ liệu thất bại!\n{e}")
 
 def huy():
+    load_data()
     lam_moi_form()
 
 def thoat():
@@ -274,4 +294,5 @@ btn_thoat.place(x = 870, y=520)
 # ------------------ KHỞI TẠO FORM ------------------
 lam_moi_form()
 load_data()
+
 root.mainloop()
